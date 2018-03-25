@@ -1,0 +1,169 @@
+= Introduction to AsciiDoc
+Doc Writer <doc@example.com>
+// Using attributes to store data
+:appversion: 1.0.0
+:fedpkg: https://apps.fedoraproject.org/packages/asciidoc
+
+// Example of other attributes
+:imagesdir: ./img
+:iconsdir: ./icons
+:stylesdir: ./styles
+:scriptsdir: ./js
+
+// Undefining an attribute with !
+:foodir: ./foo
+:foodir!:
+
+A preface about http://asciidoc.org[AsciiDoc].
+
+// Seems to be default :TOC:
+
+== Lists
+
+// Uses stored attributes
+The current version of the application is {appversion}.
++
+Information about the AsciiDoc package in Fedora is found at {fedpkg}.
+
+=== Unordered Lists
+.Title and some unordered list items
+* item 1
+* item 2
+
+=== List indentation
+.Another list with indentations
+* West wood maze
+** Maze heart
+*** Reflection pool
+** Secret exit
+* Untracked file in git repository
+
+=== Ordered Lists
+.An ordered list
+. Protons
+. Electrons
+. Neutrons
+
+==== Ordered Lists at an arbitrary start
+.Another ordered list starting at 4:
+[start=4]
+ . Step four
+ . Step five
+ . Step six
+
+// Keyboard shortcut table
+|===
+|Shortcut |Purpose
+
+|kbd:[F11]
+|Toggle fullscreen
+
+|kbd:[Ctrl+T]
+|Open a new tab
+
+|kbd:[Ctrl+Shift+N]
+|New incognito window
+
+|kbd:[Ctrl + +]
+|Increase zoom
+|===
+
+.A labled list
+CPU:: The brain of the computer.
+Hard drive:: Permanent storage for operating system and/or user files.
+RAM:: Temporarily stores information the CPU uses during operation.
+Keyboard:: Used to enter text or control items on the screen.
+Mouse:: Used to point to and select items on your computer screen.
+Monitor:: Displays information in visual form using text and graphics.
+
+.Labled list on same line
+[horizontal]
+CPU:: The brain of the computer.
+Hard drive:: Permanent storage for operating system and/or user files.
+RAM:: Temporarily stores information the CPU uses during operation.
+
+// Callout source code
+[source,ruby]
+puts "Hello, AsciiDok!"
+
+// Line breaks
+Rubies are red, +
+Topazes are blue.
+[%hardbreaks]
+Ruby is red.
+Java is black.
+
+// Admonitions
+NOTE: Lorem ipsum dolor sit amet, consectetur adipisicing elit
+
+TIP: sed do eiusmod tempor incididunt ut labore, et dolore magna aliqua
+
+IMPORTANT: Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+CAUTION: Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+
+WARNING: Wolpertingers are known to nest in server racks.
+Enter at your own risk.
+
+
+== Quoted Text
+
+// Quote text
+I can't believe it *works*!
+
+_italic phrase_
+
+__i__talic le__tt__ers
+
+*bold phrase*
+
+**b**old le**tt**ers
+
+*_bold italic phrase_*
+
+**__b__**old italic le**__tt__**ers
+
+`monospace phrase` and le``tt``ers
+
+`_monospace italic phrase_` and le``__tt__``ers
+
+`*monospace bold phrase*` and le``**tt**``ers
+
+`*_monospace bold italic phrase_*` and le``**__tt__**``ers
+
+// Renders html: <span class="userinput">asciidoc</span>
+Type the word [userinput]#asciidoc# into the search bar.
+
+// Escaping special characters
+*Use the backslash to escape special characters*
+\*Stars* will appear as *Stars*, not as bold text.
+
+\&sect; will appear as an entity, not the &sect; symbol.
+
+\\__func__ will appear as __func__, not as emphasized text.
+
+\{two-semicolons} will appear {two-semicolons}, not resolved as ;;.
+
+// Pass macro
+The markup pass:[<u>underline me</u>] renders as underlined text.
+
+//  Verbatim macro
+[subs="verbatim,macros"]
+----
+It better not contain *bold* or _italic_ text.
+pass:quotes[But It should contain *bold* text.]
+----
+
+== Links and URI's
+.Raspberry Pi Zero
+image::pizero-small.jpg[Zero, 200, 300]
+
++
+
+// A document reference
+Refer to <<document-b.adoc#section-b,Section B>> for more information.
++
+The section <<images>> describes how to insert images into your document.
+
+
+== The End

@@ -1,0 +1,98 @@
+= SpringCloud config with the Mule ESB
+Mitch Dresdner <MDresdner@Terathink.com>
+:toc:                                             // Enable table of contents [left, right]
+:toc-placement: preamble
+:appversion: 1.0.0
+// A link as attribute
+:fedpkg: https://apps.fedoraproject.org/packages/asciidoc
+// Example of other attributes
+:imagesdir: ./img
+:icons: font
+// Default icon dir is images/icons, can override using :iconsdir: ./icons
+:stylesdir: ./styles
+:scriptsdir: ./js
+// keywords added to html
+:keywords: spring-cloud, mule, configure
+
+[abstract]
+A guide for integrating the Mule SpringCloud connector with https://cloud.spring.io/spring-cloud-config/[SpringCloud Config] configuration repository.
+
+[.text-center]
+image::SpringCloud.png[SpringCloud]
+
+[.preamble]
+// Preamble goes here
+
+
+== Summary
+
+As we start pushing out our Mule runtime instances as container based solutions to the Cloud, we look for more creative ways to bind our MicroService based solutions to potentially changing endpoint locations.
+
+Spring Cloud configuration offers us a simple secure solution for deriving our endpoint properties at startup, using a Git repository.
+
+When an endpoint change is needed, the change is made to the Git repository which a Mule MicroService will read at startup, without needing to redeploy the service.
+
+== Architecture
+
+Mule supports several ways for incorporating properties, the most common approach being name/value pairs in YAML or property files.
+
+Other approaches involve setting properties in System environment variables and passing through the -D parameter into the JVM.
+
+[listing]
+--
+EXPORT resource-uri=https://resource.hots.io:8082
+  or
+... -Dresource-uri=https://resource.hots.io:8082
+--
+
+When SpringCloud config is used together with the Mule https://github.com/mulesoft-labs/spring-cloud-config-connector[SpringCloud Connector], allows us to abstract our properties to a Git repository where our Mule application can read and apply them at startup.
+
+
+[.text-center]
+image::MuleCloudConfig.png[SpringCloud Config,483,400]
+
+NOTE: Properties imported into the Mule runtime environment from SpringCloud config will be available when transports are initialized.
+
+== Adding the SpringCloud Connector to Mule
+
+With the overview out of the way, lets begin the configuration of the Mule SpringCloud connector and create a demo application to show how all of the pieces fit together.
+
+=== Configuring SpringCloud connector in your Mule app
+
+[listing]
+--
+<spring-cloud-config:config name="Spring_Cloud_Config" applicationName="foo" profiles="a,b,c"
+	label="abc" configServerBaseUrl="http://localhost:8888/"/>
+--
+
+== Building a standalone SpringCloud connector instance
+
+.Start by cloning the Mule SpringCloud connector instance
+* Change into the source folder
+* Build and install the connector
+
+[listing]
+--
+git clone https://github.com/mulesoft-labs/spring-cloud-config-connector.git
+cd spring-cloud-config-connector
+mvn clean install -Ddevkit.studio.package.skip=false
+--
+
+=== Import the connector into Mule
+
+.When the build has completed you'll find a file called UpdateSite.zip in the target folder
+* In AnypointStudio select Menu options: **Help->Install New Software**
+* Press the **Add...**  Button
+* Choose and name and the location of *UpdateSite.zip*
+
+image::InstallConnector.png[Import MUle CloudConfig Conector]
+
+Complete the installation of the connector.
+
+
+
+
+== Creating a sample project
+.A Windows installation should meet the following requirements
+* fix me
+* me too

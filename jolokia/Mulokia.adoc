@@ -1,0 +1,91 @@
+= Using Jolokia with Mule ESB
+Mitch Dresdner <MDresdner@Terathink.com>
+:toc:                                             // Enable table of contents [left, right]
+:toc-placement: preamble
+:appversion: 1.0.0
+// A link as attribute
+:fedpkg: https://apps.fedoraproject.org/packages/asciidoc
+// Example of other attributes
+:imagesdir: ./img
+:icons: font
+// Default icon dir is images/icons, can override using :iconsdir: ./icons
+:stylesdir: ./styles
+:scriptsdir: ./js
+// keywords added to html
+:keywords: jolokia, mule, agent, monitor, jmx
+
+[abstract]
+A simple guide for integrating Mule ESB with https://jolokia.org/[Jolokia] agent plugin fast.
+
+[.text-center]
+image::JolokiaLogo.png[Jolokia]
+
+[.preamble]
+// Preamble goes here
+
+
+== Executive Summary
+
+Monitoring is an essential component for ensuring the proper functioning of Microservices. As complexity in software systems increases, it becomes more difficult to understand performance characteristics and troubleshoot problems. The monitoring tools we use may also need to change to adapt to new deployment strategies and environments.
+
+This paper describes how we might utilize Open Source Jolokia as a monitoring agent for Mule. The Mule ESB has historically used the Mule Management Console (MMC) to monitor internal flow and performance characteristics.
+
+As we start pushing out Mule runtime as container based solutions other embedded monitoring adjuncts might become more appropriate solutions. Here we consider Jolokia JMX Mule Agent plugin is another option to MMC for monitoring your Mule Microservice containers.
+
+
+
+
+== Synopsis
+
+Jolokia is a JMX-HTTP bridge giving an alternative to JSR-160 connectors. It is an agent based approach with support for many platforms. In addition to basic JMX operations it enhances JMX remoting with unique features like bulk requests and fine grained security policies.
+
+== Architecture
+
+Blah blah
+
+[.text-center]
+image::JolokiaArchitecture.png[JolokiaArchitecture,483,400]
+
+== Embedding Jolokia in Mule
+
+image::JolokiaDownload.png[Jolokia – Download, 700, 390]
+
+=== Requirements
+.A Windows installation should meet the following requirements
+* 64bit Windows 10 Pro, Enterprise and Education (1511 November update, Build 10586 or later). In the future we will support more versions of Windows 10
+* The Hyper-V package must be enabled. The Docker for Windows installer will enable it for you, if needed. (This requires a reboot).
+
+Download the Jolokia Mule-Agent here -
+
+NOTE: https://jolokia.org/download.html
+
+[listing]
+--
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:spring="http://www.springframework.org/schema/beans"
+    xmlns:management="http://www.mulesoft.org/schema/mule/management"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans-current.xsd
+             http://www.mulesoft.org/schema/mule/core
+       http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+             http://www.mulesoft.org/schema/mule/management
+       http://www.mulesoft.org/schema/mule/management/current/mule-management.xsd">
+
+   <!-- Wire in Mule Jolokia Agent -->
+   <custom-agent name="jolokia-agent" class="org.jolokia.mule.JolokiaMuleAgent">
+      <spring:property name="port" value="8899"/>
+
+	  <!-- Uncomment to enable access control
+
+	    <spring:property name="user" value="mulokia"/>
+		<spring:property name="password" value="secret"/>
+
+	    -->
+
+   </custom-agent>
+</mule>
+--
+
+[listing]
+Open port 8899 for Jolokia agent

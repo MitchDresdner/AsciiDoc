@@ -1,0 +1,98 @@
+= Where's my Pi?
+Mitch Dresdner <MDresdner@DominionConsulting.com>
+:toc:                                             // Enable table of contents [left, right]
+:toc-placement: preamble
+:appversion: 1.0.0
+// A link as attribute
+:fedpkg: https://apps.fedoraproject.org/packages/asciidoc
+// Example of other attributes
+:imagesdir: ./img
+:icons: font
+// Default icon dir is images/icons, can override using :iconsdir: ./icons
+:stylesdir: ./styles
+:scriptsdir: ./js
+// keywords added to html
+:keywords: Raspberry, MDNS, Bonjour
+
+[abstract]
+This article discusses locating your  https://www.raspberrypi.org/[Raspberry Pi] without having to create a static IP address.
+
+While using a single Pi on the same network a static IP may not be a big deal, when connecting to your Pi from differing locations or networks, using dynamic discovery similar to micro services, may be preferred.
+
+[.text-center]
+.Raspberry Pi Zero
+image::pizero-small.jpg[PiZero, 256, 256]
+
+[.preamble]
+// Preamble goes here
+
+
+
+== Dynamic Discovery
+
+The main reason for a static IP address is to have a known location where we can find our Raspberry Pi on the home network. At the office and on the internet a Domain Name Server (DNS) is used for converting a user friendly name, like Apple or Google, into an internet IP address, from which a network connection is established.
+
+
+A similar mechanism for _Dynamic Discovery_ can be used in the home network. https://support.apple.com/downloads/bonjour_for_windows[Apple Bonjour] is a networking technology using http://zeroconf.org/[Zero Configuration] protocol on Windows and Mac OS's to discover network devices.
+
+Bonjour is typically used in the home to permit Windows and Apple devices to share services, such as printers or multimedia devices.
+
+On Unix OS's such as Raspian and Ubuntu the Avahi Daemon performs a similar service.
+
+_Features of Dynamic Discovery_
+
+* Plug-n-Play, no configuration needed
+* Dynamic discovery of services
+* Can coexist with heavier enterprise appliances (DNS)
+
+== Multicast DNS
+
+Multicast DNS (MDNS) https://tools.ietf.org/html/rfc6762[RFC 6762] is based on Zero Config (it just works), for service discovery. MDNS can be used standalone or together with your DNS server.
+
+Discovery is accomplished when a host sends a multicast query to the network looking for services, multicast responses are sent back which are used by listeners to update their local cache.
+
+For Raspberry Pi discovery, our interest is in finding the hostnames of our SSH daemon so we can connect without a static IP address.
+
+== Bonjour Discovery on Windows
+
+Device discovery using the https://hobbyistsoftware.com/bonjourbrowser[Windows Bonjour Browser]
+
+=== Using Windows CMD tool for multicast DNS discovery
+
+First we browse for service instances which respond to MDNS discovery of interest to us is https://developer.apple.com/library/content/qa/qa1312/_index.html[SSH discovery] to assist in connecting with our Raspberry Pi.
+[source,ruby]
+dns-sd -B  _udisks-ssh._tcp
+
+A lookup can also be performed for workstation
+[source,ruby]
+dns-sd -B _workstation._tcp
+
+Next we perform a lookup on the service instance
+[source,ruby]
+dns-sd -L guava _udisks-ssh._tcp
+
+
+[source,ruby]
+dns-sd -B _services._dns-sd._udp
+
+=== Connecting to your Pi from windows
+If you have Git installed you can use the Git BASH shell to connect to your discovered instances
+[source,ruby]
+ssh pi@guava.local
+
+
+== Avahi Discovery on Raspian
+
+On Raspian and Ubuntu you'll want to ensure that the http://manpages.ubuntu.com/manpages/trusty/man1/avahi-browse.1.html[Avahi Browse] package has been installed
+[source,ruby]
+sudo apt-get update
+sudo apt-get install libnss-mdns avahi-utils
+
+Similar to the Windows example above, we can use Avahi Browse to search for our Raspberry Pi's
+[source,ruby]
+avahi-browse _services._dns-sd._udp -t
+avahi-browse -r -t _udisks-ssh._tcp
+
+Connecting from Linux as you usually do.
+[source,ruby]
+ssh pi@guava.local
