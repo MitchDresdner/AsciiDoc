@@ -85,7 +85,7 @@ mvn clean install -Ddevkit.studio.package.skip=false
 * Press the **Add...**  Button
 * Choose and name and the location of *UpdateSite.zip*
 
-image::InstallConnector.png[Import MUle CloudConfig Conector]
+image::InstallConnector.png[Import Mule CloudConfig Conector]
 
 Complete the installation of the connector.
 
@@ -93,6 +93,21 @@ Complete the installation of the connector.
 
 
 == Creating a sample Mule project
+
+We'll begin our Mule project configuraton by adding the SpringCloud Config connector to the Global settings.
+
+.Create the SpringCloud Config connector settings
+
+image::MuleCloudCfgGlobal.png[CloudConfig global settings]
+
+Select the Spring Cloud Config connector from undef Connector Configuration and select the Ok button. This adds the settings to the Globals display.
+
+Edit the Spring Cloud Config settings to enter the application name, URL and Profile. These values correspond to the name of the property file you create for the Git repository.
+
+image::CloudCfgGlobalValues.png[CloudConfig global settings]
+
+With the Global configurations complete, we mov on to the configuration of the Mule Flow.
+
 .The Mule implementation is a simple flow consisting of the following:
 * HTTP endpoint to trigger the flow
 * A logger statement to display fetched property
@@ -106,10 +121,10 @@ Complete the installation of the connector.
 
     <flow name="mule-cloud-configFlow">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/foo" doc:name="HTTP"/>
-        <-- Debug to output properties -->
+        <-- Debug to output properties
         <spring-cloud-config:dump-configuration config-ref="Spring_Cloud_Config__Spring_Cloud_Configuration" doc:name="Spring Cloud Config"/>
-
-		    <logger message="Property: ActiveMQ URI = ${activemq.url}  and message = #[message]" level="INFO" doc:name="Logger"/>
+          -->
+		    <logger message="Property: ActiveMQ URI = ${activemq.url}" level="INFO" doc:name="Logger"/>
 
     </flow>
 --
@@ -138,7 +153,7 @@ git init
 # Git Repository location is \home\Dev\git-localconfig-repo
 
 # Use your favorite editor to create the property file below, im going to cheat and use cat in my git bash shell
-cat > dev.properties
+cat > example-dev.properties
 ################################
 #  ActimeMQ server properties  #
 ################################
@@ -150,6 +165,8 @@ activemq.url=tcp://localhost:61616
 mule.http.port=8083
 ^D
 --
+
+The property file name *example-dev.properties* is significant. The first part *example* equates to application name which you'll later add to the Mule global property configuration for SpringConfig, the values after the dash (*dev*) represent the profile names for the properties, which can be a comma separated list of profiles to be read from the repository.
 
 Now that we have a property file in a local Git repository we'll commit the changes and move on to creating the SpringConfig Server.
 
