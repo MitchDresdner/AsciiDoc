@@ -26,11 +26,11 @@ image::SpringCloud.png[SpringCloud]
 
 == Summary
 
-As we start pushing out our Mule runtime instances as container based solutions to the Cloud, we look for more creative ways to bind our MicroService based solutions to potentially changing endpoint locations.
+As we start pushing out our Mule runtime instances as container based solutions into the Cloud, we look for more creative ways to bind our MicroService based solutions to potentially changing endpoint locations.
 
-Spring Cloud configuration offers us a simple secure solution for deriving our endpoint properties at startup, using a Git repository.
+Spring Cloud configuration offers us a simple secure solution for deriving our endpoint properties at startup, through a Git repository.
 
-When an endpoint change is needed, the change is made to the Git repository which a Mule MicroService will read at startup, without needing to redeploy the service.
+When an endpoint change is needed, the change is made to the Git repository which a Mule MicroService will read at startup, without having to redeploy the service.
 
 == Architecture
 
