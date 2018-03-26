@@ -92,7 +92,87 @@ Complete the installation of the connector.
 
 
 
-== Creating a sample project
+== Creating a sample Mule project
 .A Windows installation should meet the following requirements
 * fix me
 * me too
+
+== Creating the SpringConfig Server
+
+The SpringConfig Server will be a simple SpringBoot project which will look for property dependencies in a Git repository. Let's start by creating the Git repository adding a property file and commiting the changes.
+
+.Creating the Git Repository for properties
+
+[listing]
+--
+cd \home\Dev
+mkdir git-localconfig-repo
+cd git-localconfig-repo
+
+# Initialize the Git repository
+git init
+--
+
+.Using your favorite editor create a property file with the following sample properties:
+[listing]
+--
+# Git Repository location is \home\Dev\git-localconfig-repo
+
+# Use your favorite editor to create the property file below, im going to cheat and use cat in my git bash shell
+cat > dev.properties
+################################
+#  ActimeMQ server properties  #
+################################
+activemq.url=tcp://localhost:61616
+
+################################
+# HTTP Properties              #
+################################
+mule.http.port=8083
+^D
+--
+
+Now that we have a property file in a local Git repository we'll commit the changes and move on to creating the SpringConfig Server.
+
+NOTE: All SpringBoot projects start at http://start.spring.io/
+
+.Create a SpringBoot Project
+
+image::SpringInitializr.png[Spring Initializer,600,300]
+
+With the SpringConfig Server created we'll add the necessary pieces to create the server and bind to our Git properties.
+
+.SpringConfig Server settings
+*Enable the server with @EnableConfigServer
+*Define the server property configuration
+
+[listing]
+--
+@EnableConfigServer
+@SpringBootApplication
+public class SpringCloudConfigServerApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(SpringCloudConfigServerApplication.class, args);
+	}
+}
+--
+
+.Property file configuration
+[listing]
+--
+# application.properties
+spring.application.name=spring-cloud-config-server
+server.port=8888
+
+# Define the location of our Git repo
+spring.cloud.config.server.git.uri=file:///Home/Dev/git-localconfig-repo/
+--
+
+Now the the changes are in place for the SpringConfig Server, let's start it up and access the property settings from our Mule application
+
+.Start our SpringConfig Server with maven
+[listing]
+--
+mvn spring-boot:run
+--
