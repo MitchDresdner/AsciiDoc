@@ -93,9 +93,28 @@ Complete the installation of the connector.
 
 
 == Creating a sample Mule project
-.A Windows installation should meet the following requirements
-* fix me
-* me too
+.The Mule implementation is a simple flow consisting of the following:
+* HTTP endpoint to trigger the flow
+* A logger statement to display fetched property
+
+[listing]
+--
+<spring-cloud-config:config name="Spring_Cloud_Config__Spring_Cloud_Configuration" applicationName="common-tecc2" profiles="dev" doc:name="Spring Cloud Config: Spring Cloud Configuration"/>
+
+	<http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="${mule.http.port}" doc:name="HTTP Listener Configuration"/>
+
+
+    <flow name="mule-cloud-configFlow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/foo" doc:name="HTTP"/>
+        <-- Debug to output properties -->
+        <spring-cloud-config:dump-configuration config-ref="Spring_Cloud_Config__Spring_Cloud_Configuration" doc:name="Spring Cloud Config"/>
+
+		    <logger message="Property: ActiveMQ URI = ${activemq.url}  and message = #[message]" level="INFO" doc:name="Logger"/>
+
+    </flow>
+--
+
+With the Mule flow complete we move on to the creation of the SpringBoot component.
 
 == Creating the SpringConfig Server
 
@@ -143,8 +162,8 @@ image::SpringInitializr.png[Spring Initializer,600,300]
 With the SpringConfig Server created we'll add the necessary pieces to create the server and bind to our Git properties.
 
 .SpringConfig Server settings
-*Enable the server with @EnableConfigServer
-*Define the server property configuration
+* Enable the server with @EnableConfigServer
+* Define the server property configuration
 
 [listing]
 --
@@ -176,3 +195,5 @@ Now the the changes are in place for the SpringConfig Server, let's start it up 
 --
 mvn spring-boot:run
 --
+
+Next start the Mule flow and trigger the flow to review the results of the SpringConfig Server integration.
