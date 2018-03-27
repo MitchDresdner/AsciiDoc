@@ -234,9 +234,9 @@ Next start the Mule flow and trigger the flow to review the results of the Sprin
 
 Notice that the HTTP Flow starter will derive it's property setting from the Spring Cloud Config Server, initiate the Flow and the Logger statement will print the property value obtained for the ActiveMQ server.
 
-I hope you enjoyed this article as much as I have writting it and look forward to your feedback.
+I hope you enjoyed this article as much as I have writing it and look forward to your feedback.
 
 
 About the Author:
 
-Mitch Dresdner is a Senior Mule Consultant at TerraThink
+https://www.linkedin.com/in/mitch-dresdner-785a46126/[Mitch Dresdner] is a Senior Mule Consultant at TerraThink
