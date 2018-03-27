@@ -18,7 +18,7 @@ Mitch Dresdner <MDresdner@Terathink.com>
 A guide for integrating the Mule Spring Cloud connector with https://cloud.spring.io/spring-cloud-config/[Spring Cloud Config] configuration repository.
 
 [.text-center]
-image::Spring Cloud.png[Spring Cloud]
+image::SpringCloud.png[Spring Cloud,align="center"]
 
 [.preamble]
 // Preamble goes here
@@ -52,6 +52,7 @@ When Spring Cloud Config is used together with the Mule https://github.com/mules
 
 
 [.text-center]
+.Mule interface with Spring Cloud Config
 image::MuleCloudConfig.png[Spring Cloud Config,483,400]
 
 NOTE: Properties imported into the Mule runtime environment from Spring Cloud config will be available when transports are initialized.
@@ -82,6 +83,8 @@ mvn clean install -Ddevkit.studio.package.skip=false
 * Press the **Add...**  Button
 * Choose and name and the location of *UpdateSite.zip*
 
+[.text-center]
+.Install Mule Cloud Config Connector
 image::InstallConnector.png[Import Mule CloudConfig Conector]
 
 Complete the installation of the connector.
@@ -93,14 +96,16 @@ Complete the installation of the connector.
 
 We'll begin our Mule project configuraton by adding the Spring Cloud Config connector to the Global settings.
 
+[.text-center]
 .Create the Spring Cloud Config connector settings
-
 image::MuleCloudCfgGlobal.png[CloudConfig global settings]
 
 Select the Spring Cloud Config connector from undef Connector Configuration and select the Ok button. This adds the settings to the Globals display.
 
 Edit the Spring Cloud Config settings to enter the application name, URL and Profile. These values correspond to the name of the property file you create later for the Git repository configuration. Application Name will match the first part of the property file naming convention, the Profile will match with the second part of the naming convention. Together the two will be matched as: *example-dev.properties*.
 
+[.text-center]
+.Global settings for Spring Cloud Config
 image::CloudCfgGlobalValues.png[CloudConfig global settings]
 
 With the Global configurations complete, we move on to the configuration of the Mule Flow.
@@ -182,6 +187,7 @@ Now that we have a property file in a local Git repository we'll commit the chan
 NOTE: To create our SpringBoot Cloud Config Server project, start at http://start.spring.io/
 
 
+[.text-center]
 .Create a SpringBoot Project
 image::SpringInitializr.png[Spring Initializer,600,300]
 
