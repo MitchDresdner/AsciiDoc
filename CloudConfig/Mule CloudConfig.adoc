@@ -14,15 +14,23 @@ Mitch Dresdner <MDresdner@Terathink.com>
 // keywords added to html
 :keywords: spring-cloud, mule, configure
 
+// enable btn:
+:experimental:
+
 [abstract]
 A guide for integrating the Mule Spring Cloud connector with https://cloud.spring.io/spring-cloud-config/[Spring Cloud Config] configuration repository.
+
+{sp} +
 
 [.text-center]
 image::SpringCloud.png[Spring Cloud,align="center"]
 
+{sp} +
+
 [.preamble]
 // Preamble goes here
 
+{sp} +
 
 == Summary
 
@@ -31,12 +39,15 @@ As we start pushing out our Mule runtime instances as container based solutions 
 Spring Cloud configuration offers us a simple secure solution for deriving our endpoint properties at startup, using a Git repository.
 
 When an endpoint change is needed, the change can applied to the Git repository which Mule MicroServices will read at startup, obviating the need to redeploy the service.
+{sp} +
 
 == Architecture
 
 Abstracted parameters drive endpoint configuration and Mule supports several ways for working with properties, the most common approach being name/value pairs in YAML or Property files.
 
 Other approaches can make use of setting properties in System environment variables and passing through the -D parameter into the JVM.
+
+{sp} +
 
 [listing]
 --
@@ -45,17 +56,24 @@ EXPORT resource-uri=https://resource.hots.io:8082
 ... -Dresource-uri=https://resource.hots.io:8082
 --
 
+{sp} +
+
 While all these approaches are all suitable for configuring Mule properties, in a dynamic MicroServices environment we prefer an approach with less friction and minimal reconfiguration.
 Spring Cloud Config provides just that, a server and client-side support for externalized configuration in a distributed system. With the Config Server you have a central place to manage external properties for applications across all environments.
 
 When Spring Cloud Config is used together with the Mule https://github.com/mulesoft-labs/spring-cloud-config-connector[Spring Cloud Connector], it allows us to abstract our properties to a Git repository where our Mule application can read and apply them at startup.
 
+{sp} +
 
 [.text-center]
 .Mule interface with Spring Cloud Config
 image::MuleCloudConfig.png[Spring Cloud Config,483,400]
 
+{sp} +
+
 NOTE: Properties imported into the Mule runtime environment from Spring Cloud config will be available when transports are initialized.
+
+{sp} +
 
 == Adding the Spring Cloud Connector to Mule
 
@@ -63,11 +81,15 @@ With the overview out of the way, lets begin with the configuration of the Mule 
 
 First we'll clone the git repository containing the Mule Spring Cloud connector, build the connector and install into AnypointStudio.
 
+{sp} +
+
 === Building a standalone Spring Cloud connector instance
 
 .Start by cloning the Mule Spring Cloud connector instance
 * Change into the source folder
 * Build and install the connector
+
+{sp} +
 
 [listing]
 --
@@ -76,6 +98,8 @@ cd spring-cloud-config-connector
 mvn clean install -Ddevkit.studio.package.skip=false
 --
 
+{sp} +
+
 === Import the connector into Mule
 
 .When the build has completed you'll find a file called UpdateSite.zip in the target folder
@@ -83,39 +107,57 @@ mvn clean install -Ddevkit.studio.package.skip=false
 * Press the **Add...**  Button
 * Choose and name and the location of *UpdateSite.zip*
 
+{sp} +
+
 [.text-center]
 .Install Mule Cloud Config Connector
 image::InstallConnector.png[Import Mule CloudConfig Conector]
 
+{sp} +
+
 Complete the installation of the connector.
 
-
+{sp} +
 
 
 == Creating a sample Mule project
 
 We'll begin our Mule project configuraton by adding the Spring Cloud Config connector to the Global settings.
 
+{sp} +
+
 [.text-center]
 .Create the Spring Cloud Config connector settings
 image::MuleCloudCfgGlobal.png[CloudConfig global settings]
 
-Select the Spring Cloud Config connector from undef Connector Configuration and select the Ok button. This adds the settings to the Globals display.
+{sp} +
+
+// Fontawesome icon - icon:comment[]
+Select the Spring Cloud Config connector from undef Connector Configuration and select the btn:[OK] button. This adds the settings to the Globals display.
 
 Edit the Spring Cloud Config settings to enter the application name, URL and Profile. These values correspond to the name of the property file you create later for the Git repository configuration. Application Name will match the first part of the property file naming convention, the Profile will match with the second part of the naming convention. Together the two will be matched as: *example-dev.properties*.
+
+{sp} +
 
 [.text-center]
 .Global settings for Spring Cloud Config
 image::CloudCfgGlobalValues.png[CloudConfig global settings]
 
+{sp} +
+
 With the Global configurations complete, we move on to the configuration of the Mule Flow.
+
+{sp} +
 
 .The Mule implementation demonstrates a simple flow consisting of the following:
 * An HTTP endpoint to trigger the initiation of the flow
 * A logger statement to display fetched property
 
-[listing]
---
+{sp} +
+
+.Mule application.xml
+[source,xml]
+----
 <spring-cloud-config:config
   name="Spring_Cloud_Config__Spring_Cloud_Configuration"
   applicationName="example"
@@ -131,26 +173,31 @@ With the Global configurations complete, we move on to the configuration of the 
     <http:listener config-ref="HTTP_Listener_Configuration"
     path="/foo" doc:name="HTTP"/>
 
-    <-- Debug to output properties
+
         <spring-cloud-config:dump-configuration
          config-ref="Spring_Cloud_Config__Spring_Cloud_Configuration"
-         doc:name="Spring Cloud Config"/>
-     -->
+         doc:name="Spring Cloud Config"/>  <!-- 1 -->
 
      <logger message="Property: ActiveMQ URI = ${activemq.url}"
       level="INFO" doc:name="Logger"/>
 
   </flow>
---
+----
+<1> For extended debug, enable debug level logging
+
+{sp} +
 
 With the Mule flow complete we move on to the creation of the SpringBoot component.
+
+{sp} +
 
 == Creating the SpringConfig Server
 
 The SpringConfig Server will be a simple SpringBoot project which will look for property dependencies in a Git repository. Let's start by creating the Git repository adding a property file and commiting the changes.
 
-.Creating the Git Repository for properties
+{sp} +
 
+.Creating the Git Repository for properties
 [listing]
 --
 cd \home\Dev
@@ -160,6 +207,8 @@ cd git-localconfig-repo
 # Initialize the Git repository
 git init
 --
+
+{sp} +
 
 .Using your favorite editor create a property file with the following sample properties:
 [listing]
@@ -180,26 +229,39 @@ mule.http.port=8083
 ^D
 --
 
+{sp} +
+
 The property file name *example-dev.properties* is significant. The first part *example* equates to application name which you added earlier in the Mule global property configuration for SpringConfig, the values after the dash (*dev*) represent the profile names for the properties, which can be a comma separated list of profiles to be read from the repository. Each Profile will match to a corresponding Property file in Git.
 
 Now that we have a property file in a local Git repository we'll commit the changes and move on to creating the SpringConfig Server.
 
-NOTE: To create our SpringBoot Cloud Config Server project, start at http://start.spring.io/
+{sp} +
+
+TIP: To create our SpringBoot Cloud Config Server project, start at http://start.spring.io/
+
+{sp} +
 
 
 [.text-center]
 .Create a SpringBoot Project
 image::SpringInitializr.png[Spring Initializer,600,300]
 
+{sp} +
+
 With the SpringConfig Server created we'll add the necessary pieces to create the server and bind to our Git properties.
+
+{sp} +
 
 .SpringConfig Server settings
 * Enable the server with @EnableConfigServer
 * Define the server property configuration
 
-[listing]
---
-@EnableConfigServer
+{sp} +
+
+.SpringBoot Main Application
+[source,java]
+----
+@EnableConfigServer   // <1>
 @SpringBootApplication
 public class Spring CloudConfigServerApplication {
 
@@ -207,22 +269,30 @@ public class Spring CloudConfigServerApplication {
     SpringApplication.run(Spring CloudConfigServerApplication.class, args);
   }
 }
---
+----
+<1> Enable the Spring Boot Config server
+
+{sp} +
 
 .Property file configuration
-[listing]
---
+[source,shell]
+----
 # application.properties
-spring.application.name=spring-cloud-config-server
-
-# Default port for Spring Cloud Config Server
-server.port=8888
+spring.application.name=spring-cloud-config-server  # <1>
+server.port=8888    # <2>
 
 # Define the location of our Git repo
-spring.cloud.config.server.git.uri=file:///Home/Dev/git-localconfig-repo/
---
+spring.cloud.config.server.git.uri=file:///Home/Dev/git-localconfig-repo/ #<3>
+----
+<1> Application name
+<2> Default port number for  Spring Cloud Config Server
+<3> URI for Git repository
+
+{sp} +
 
 Now the the changes are in place for the SpringConfig Server, let's start it up and access the property settings from our Mule application
+
+{sp} +
 
 .Start our SpringConfig Server with maven
 [listing]
@@ -230,12 +300,16 @@ Now the the changes are in place for the SpringConfig Server, let's start it up 
 mvn spring-boot:run
 --
 
+{sp} +
+
 Next start the Mule flow and trigger the flow to review the results of the SpringConfig Server integration.
 
 Notice that the HTTP Flow starter will derive it's property setting from the Spring Cloud Config Server, initiate the Flow and the Logger statement will print the property value obtained for the ActiveMQ server.
 
 I hope you enjoyed this article as much as I have writing it and look forward to your feedback.
 
+{sp} +
+{sp} +
 
 About the Author:
 
