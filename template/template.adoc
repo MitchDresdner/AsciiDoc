@@ -1,0 +1,47 @@
+= Template document, please replace me
+Mitch Dresdner <MDresdner@Terathink.com>
+:toc:                                             // Enable table of contents [left, right]
+:toc-placement: preamble
+:appversion: 1.0.0
+// A link as attribute
+:fedpkg: https://apps.fedoraproject.org/packages/asciidoc
+// Example of other attributes
+:imagesdir: ./img
+:icons: font
+// Default icon dir is images/icons, can override using :iconsdir: ./icons
+:stylesdir: ./styles
+:scriptsdir: ./js
+// keywords added to html
+:keywords: spring-cloud, mule, configure
+
+// enable btn:
+:experimental:
+
+[abstract]
+Blah blah blah
+
+{sp} +
+
+[.preamble]
+// Preamble goes here
+
+== Summary
+
+Be so kind as to insert the summary
+
+{sp} +
+
+== Architecture
+
+Architecture or Markitecture
+
+=== Other stuff
+
+{sp} +
+
+=== Still more
+
+
+About the Author:
+
+https://www.linkedin.com/in/mitch-dresdner-785a46126/[Mitch Dresdner] is a Senior Mule Consultant at TerraThink

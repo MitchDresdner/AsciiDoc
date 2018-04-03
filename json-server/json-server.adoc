@@ -1,0 +1,92 @@
+= Integrate your apps with JSON Server
+Mitch Dresdner <MDresdner@Terathink.com>
+:toc:                                             // Enable table of contents [left, right]
+:toc-placement: preamble
+:appversion: 1.0.0
+// A link as attribute
+:fedpkg: https://apps.fedoraproject.org/packages/asciidoc
+// Example of other attributes
+:imagesdir: ./img
+:icons: font
+// Default icon dir is images/icons, can override using :iconsdir: ./icons
+:stylesdir: ./styles
+:scriptsdir: ./js
+// keywords added to html
+:keywords: springboot, mule, json, java, npm, python, httpie
+
+// enable btn:
+:experimental:
+
+[abstract]
+Static JSON API responses with minimal effort
+
+{sp} +
+
+[.preamble]
+// Preamble goes here
+
+== Summary
+
+Time and again we find ourselves in need of standing up a server
+for sharing interfaces with our clients or for exercising our applications.
+
+You might call it a pattern, call it what you may - when there's a
+need to quickly spin up a static response JSON API solution not many choices
+are as easy to implement or as solid a choice as
+ https://github.com/typicode/json-server[json-server].
+
+
+{sp} +
+
+== Architecture
+
+Architecture or Markitecture
+
+=== Other stuff
+
+{sp} +
+
+=== Still more
+
+== Installation
+
+The json-server is a JavaScript application which I hope won't scare off too
+many Java or Mule developers. The insallation really is quite simple.
+
+.The Node Package Manager (NPM)
+****
+NPM is a package manager based on the Goole Chrome JavaScript engine,
+it consists of a command line client that interacts with a remote registry.
+We'll use it to pull down **json-server**.
+
+Download the latest version https://nodejs.org/en/[here]
+
+****
+
+.Installing the JSON Server
+[shell]
+----
+npm install -g json-server
+----
+
+== Configuring  json-server
+
+First we need to decide where we'll keep the JSON schema we'll return for client requests.
+
+== Interactions with json-server
+
+=== SpringBoot example
+=== Mule Example
+=== HTTPie Example
+
+https://github.com/jakubroztocil/httpie[HTTPie] is a https://curl.haxx.se/docs/manpage.html[curl] like commandline tool which can be used from Unix and Windows.
+I like it better than curl now because it comes loaded with lots of syntactic sugar.
+
+Feel free to use curl from a Git bash terminal shell on Windows if you'de
+
+{sp} +
+{sp} +
+
+About the Author:
+
+https://www.linkedin.com/in/mitch-dresdner-785a46126/[Mitch Dresdner] is a Senior Mule Consultant at TerraThink
