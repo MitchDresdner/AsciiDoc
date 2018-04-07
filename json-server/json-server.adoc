@@ -22,17 +22,16 @@ Static JSON API responses with minimal effort
 
 {sp} +
 
-[.preamble]
-// Preamble goes here
+An end-to-end testing framework
 
 == Summary
 
-Time and again we find ourselves in need of standing up a server
-for sharing interfaces with our clients or for exercising our applications.
+Time and again we find ourselves in need of standing up a JSON server
+for sharing schemas with our clients while our development is
+in progress or for supporting our own end-to-end testing.
 
-You might call it a pattern, call it what you may - when there's a
-need to quickly spin up a static response JSON API solution not many choices
-are as easy to implement or as solid a choice as
+When you need a fast, easy to use JSON API solution,
+not many options are quick get running or as feature-rich as the
  https://github.com/typicode/json-server[json-server].
 
 
@@ -40,53 +39,472 @@ are as easy to implement or as solid a choice as
 
 == Architecture
 
-Architecture or Markitecture
+The json-server implements the client/server Use Case, with the client application
+making HTTP requests to the server and the server providing determined canned responses
+or simulated errors.
 
-=== Other stuff
+When the server starts it will read a database of static
+JSON responses which we'll interact with later using the HTTPie JSON Client.
+
+Another Use Case for json-server is when you're developing a new application
+which depends on API's which are rate limited. One example of this is the
+http://openweathermap.org/api[Open Wearther Map] api. With the free tier
+you're limited to a fixed number of calls in a sliding time window. You
+can capture the JSON results, add them to json-server database and play them back by
+making unlimited, unbounded requests.
 
 {sp} +
+{sp} +
 
-=== Still more
+[caption="foo"]
+.Client/Server interaction with the json-server
+image:json-server.png[Json Server]
+
+{sp} +
+{sp} +
 
 == Installation
 
+{sp} +
+{sp} +
+
 The json-server is a JavaScript application which I hope won't scare off too
-many Java or Mule developers. The insallation really is quite simple.
+many Java or Mule developers, certainly it won't scare any polyglots! The installation really is quite simple.
+
+{sp} +
+{sp} +
 
 .The Node Package Manager (NPM)
 ****
-NPM is a package manager based on the Goole Chrome JavaScript engine,
+NPM is the default package manager for the JavaScript runtime environment https://nodejs.org/en/download/[Node.js],
 it consists of a command line client that interacts with a remote registry.
-We'll use it to pull down **json-server**.
+We'll use NPM to download and install **json-server**.
+
+This is as simple installation if you don't already have NPM installed.
 
 Download the latest version https://nodejs.org/en/[here]
 
 ****
 
+{sp} +
+{sp} +
+
+With NPM installed, you can perform a global install of json-server.
+The installation will add json-server to your path and allow you to run
+it from a shell window.
+
+{sp} +
+{sp} +
+
+NOTE: If this is the first time you're installing NPM you may need to open a new shell to add the new path.
+
+{sp} +
+{sp} +
+
 .Installing the JSON Server
 [shell]
 ----
 npm install -g json-server
+
+# verify the installation was successful
+json-server -v
 ----
+
+{sp} +
+{sp} +
 
 == Configuring  json-server
 
-First we need to decide where we'll keep the JSON schema we'll return for client requests.
+You will need to decide where you'll keep the JSON schema database, which keeps the schema
+that will be returned for client requests.
+
+{sp} +
+{sp} +
+
+=== Sample db.json database
+
+
+With json-server installed, create a folder where you plan to keep any sample data and project properties.
+
+It's up to you where you would like to put it, I like keeping it on my
+Google Drive so I can reuse it on different machines, keeping it in Git is another good solution.
+
+{sp} +
+{sp} +
+
+[listing]
+--
+mkdir json-server
+cd json-server
+mkdir json
+
+--
+
+{sp} +
+{sp} +
+
+In the **json** folder create this sample **db.json** file.
+
+When you've completed the hierarchy should look like this:
+
+{sp} +
+{sp} +
+
+.Folder hierarchy
+image:db-path.png[Folder structure]
+
+{sp} +
+{sp} +
+
+[source,json]
+.db.json
+----
+{
+  "wines": [
+    { "id": 1, "product": "SOMMELIER SELECT",
+      "desc": "Old vine Cabernet Sauvignon", "price": 159.99 },
+    { "id": 2, "product": "MASTER VINTNER",
+      "desc": "Pinot Noir captures luscious aromas", "price": 89.99 },
+    { "id": 3, "product": "WINEMAKER'S RESERVE",
+      "desc": "Merlot featuring complex flavors of cherry", "price": 84.99 },
+    { "id": 4, "product": "ITALIAN SANGIOVESE",
+      "desc": "Sangiovese grape is famous for its dry, bright cherry character", "price": 147.99 }
+  ],
+  "comments": [
+    { "id": 1, "body": "like the added grape skins", "postId": 1 },
+    { "id": 1, "body": "the directions need to be clearer", "postId": 2 },
+    { "id": 3, "body": "I received 3 different packages of wood chips", "postId": 1 }
+  ],
+  "profile": { "name": "vintnor" }
+}
+----
+
+{sp} +
+{sp} +
+
+=== Running the json-server
+
+With our sample data created lets start playing with the json-server.
+
+{sp} +
+{sp} +
 
 == Interactions with json-server
 
-=== SpringBoot example
-=== Mule Example
-=== HTTPie Example
+In this section we'll starting putting our json-server interactions into practical use.
 
-https://github.com/jakubroztocil/httpie[HTTPie] is a https://curl.haxx.se/docs/manpage.html[curl] like commandline tool which can be used from Unix and Windows.
-I like it better than curl now because it comes loaded with lots of syntactic sugar.
+TIP: For a refresher on the usage of *HTTP Verbs* see this https://dzone.com/articles/the-simple-guide-to-http-verbs-patch-put-and-post[DZone article.]
 
-Feel free to use curl from a Git bash terminal shell on Windows if you'de
+From the json-server folder, run the following command:
+
 
 {sp} +
 {sp} +
 
+.Getting json-server command line help
+[listing]
+--
+json-server -h
+--
+
+{sp} +
+{sp} +
+
+As you can see there's lots of options for changing or overriding the defalut behaviors.
+
+{sp} +
+{sp} +
+
+CAUTION: On a Unix system, change the Windows backslash "\" to a Unix forward slash "/".
+
+{sp} +
+{sp} +
+
+When we start json-server, the default port it will listen on is 3000.
+If you prefer a different port you have two options, the first is to use
+the -p switch passing the new port number. You can also add a config file
+which you specify the location of using the -c switch. In the examples below
+we'll be using the defaults.
+{sp} +
+{sp} +
+
+.Example json-server config file: json-server.json
+[listing]
+--
+{
+  "port": 9000
+}
+--
+{sp} +
+{sp} +
+
+With the preliminaries out of the way, lets start json-server and
+prepare for sending some command line requests.
+
+{sp} +
+{sp} +
+
+.Starting the json-server
+[listing]
+--
+json-server --watch json/db.json
+--
+
+{sp} +
+{sp} +
+
+In this the first example we start the json-server asking it to
+watch the file **json\db.json** for changes.
+
+{sp} +
+{sp} +
+
+.Beneath the ascii art you should see the following
+[listing]
+--
+Loading json\db.json <1>
+Done
+
+Resources <2>
+http://localhost:3000/wines
+http://localhost:3000/comments
+http://localhost:3000/profile
+
+Home <3>
+http://localhost:3000
+--
+<1> Database file **json\db.json** loaded successfully
+<2> URI's for JSON resources which were loaded
+<3> The URI for the default internal website (you can change this)
+
+{sp} +
+{sp} +
+
+=== HTTPie Examples
+
+To get started using HTTPie for the examples, you can download it
+using the link below.
+
+Feel free to use https://www.getpostman.com/[Postman] or curl from a https://git-scm.com/downloads[Git bash] terminal shell on Windows if you'de prefer.
+You should be able to adapt the HTTPie examples accordingly.
+
+https://github.com/jakubroztocil/httpie[HTTPie] is a https://curl.haxx.se/docs/manpage.html[curl] like command line tool which can be used from Unix and Windows.
+I like it better than curl because it comes loaded with lots of syntactic sugar.
+
+{sp} +
+{sp} +
+
+. Basic HTTPie usage
+[listing]
+----
+http localhost:3000/wines/1
+or
+http http://localhost:3000/wines/1
+----
+
+{sp} +
+{sp} +
+
+Note that when HTTPie installs it will be called *http*, when you invoke it
+the command line, you can use or leave off the *http://* part of the URI,
+it's your choice.
+
+{sp} +
+{sp} +
+
+==== Default WebSite
+
+Lets get started by hitting the default website from your browser.
+
+.Use browser to access website
+[listing]
+----
+http://localhost:3000
+----
+
+{sp} +
+{sp} +
+
+Under **Resources** you notice that _vintner_ has been misspelled as _vintnor_. You fix the
+typo using your favorite editor and save the file. Refreshing the link you notice that
+the change has already been picked up by json-server.
+
+Providing the **--watch* option told the json-server to run in development mode, watching
+and reloading changes.
+
+{sp} +
+{sp} +
+
+==== GET Request
+
+
+.HTTP GET Requests
+image:get-wines-1.png[Folder structure,150]
+
+
+.Use HTTPie, curl or postman
+[listing]
+--
+http localhost:3000/wines/1
+--
+
+
+GET Requests
+|===
+|Request |URI |Result
+
+|GET
+|http localhost:3000/wines
+|All wine entries
+
+|GET
+|http localhost:3000/wines/1
+|Wine with ID=1
+
+|GET
+|http localhost:3000/wines?price_gte=100
+|wines with price >= 100
+
+|GET
+|http localhost:3000/wines?id_ne=2
+|filter id=2
+
+|===
+
+_For more examples see the https://github.com/typicode/json-server[json-server] website_
+
+{sp} +
+{sp} +
+
+==== POST Request
+
+With POST we will add a new record to the database.
+
+{sp} +
+{sp} +
+
+.HTTP POST Requests
+image:post-wines.png[Folder structure,150]
+
+
+{sp} +
+{sp} +
+
+.Use HTTPie, curl or postman
+[listing]
+--
+http POST localhost:3000/wines id=5 product="TWO BUCK CHUCK" price=2.99 desc="Squeezed rapidly from a delicate, yet unpretentious grape"
+--
+
+
+|===
+
+|Request |URI |Result
+
+|POST
+|http localhost:3000/wines
+|All wine entries
+
+|GET
+|http localhost:3000/wines
+|All wine entries
+
+|GET
+|http localhost:3000/wines?desc_like=grape
+|All wines with _grape_ in  desc
+
+|===
+
+{sp} +
+{sp} +
+
+==== PUT Request
+
+In our PUT example we'll make a change to *product*
+to the record we just added with POST.
+
+{sp} +
+{sp} +
+
+.HTTP PUT Requests
+image:put-wines.png[Folder structure,150]
+
+
+{sp} +
+{sp} +
+
+.Use HTTPie, curl or postman
+[listing]
+--
+http PUT localhost:3000/wines/5 product="TWO-ISH BUCK CHUCK" price=2.99 desc="Squeezed rapidly from a delicate, yet pretentious grape"
+--
+
+
+|===
+
+|Request |URI |Result
+
+|PUT
+|http localhost:3000/wines
+|All wine entries
+
+|GET
+|http localhost:3000/wines
+|All wine entries
+
+|===
+
+{sp} +
+{sp} +
+
+NOTE: If you don't enter all the fields, PUT will replace with just what you provide.
+
+{sp} +
+{sp} +
+
+==== DELETE Request
+
+To complete our example CRUD operations we'll delete the record with ID=5
+
+{sp} +
+{sp} +
+
+.HTTP DELETE Requests
+image:delete-wines.png[Folder structure,150]
+
+
+{sp} +
+{sp} +
+
+.Use HTTPie, curl or postman
+[listing]
+--
+http DELETE localhost:3000/wines/5
+--
+
+
+|===
+
+|Request |URI |Result
+
+|DELETE
+|http localhost:3000/wines/5
+|Deletes wine with ID=5
+
+|GET
+|http localhost:3000/wines
+|All wine entries
+
+|===
+
+
+{sp} +
+{sp} +
+
+I hope you enjoyed reading this article as much as I have writing it, i'm looking forward to your feedback.
+
+{sp} +
+{sp} +
 About the Author:
 
 https://www.linkedin.com/in/mitch-dresdner-785a46126/[Mitch Dresdner] is a Senior Mule Consultant at TerraThink
