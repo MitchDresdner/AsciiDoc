@@ -29,17 +29,17 @@
     {
       "id": 1,
       "body": "like the added grape skins",
-      "postId": 1
+      "wineId": 1
     },
     {
       "id": 1,
       "body": "the directions need to be clearer",
-      "postId": 2
+      "wineId": 2
     },
     {
       "id": 3,
       "body": "I received 3 different packages of wood chips",
-      "postId": 1
+      "wineId": 1
     }
   ],
   "profile": {

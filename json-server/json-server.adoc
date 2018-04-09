@@ -1,4 +1,4 @@
-= Integrate your apps with JSON Server
+= Zero code REST with json-server
 Mitch Dresdner <MDresdner@Terathink.com>
 :toc:                                             // Enable table of contents [left, right]
 :toc-placement: preamble
@@ -12,7 +12,7 @@ Mitch Dresdner <MDresdner@Terathink.com>
 :stylesdir: ./styles
 :scriptsdir: ./js
 // keywords added to html
-:keywords: springboot, mule, json, java, npm, python, httpie
+:keywords: REST, json, java, node, npm, javascript, httpie
 
 // enable btn:
 :experimental:
@@ -30,27 +30,33 @@ Time and again we find ourselves in need of standing up a JSON server
 for sharing schemas with our clients while our development is
 in progress or for supporting our own end-to-end testing.
 
-When you need a fast, easy to use JSON API solution,
-not many options are quick get running or as feature-rich as the
+The json-server is a JavaScript application, as a Java and MuleSoft developer
+i'm not turned off by working with using other application stacks when
+there's a good fit. To be able to stand up a JSON REST Server with Zero
+coding makes it a compelling case. While you can add custom JavaScript
+middleware to enhance it's functionality, for most developers the standard
+features should suffice.
+
+When you're in need of a fast, easy to use JSON API solution,
+not many solutions are as quick to get running or as feature-rich as the
  https://github.com/typicode/json-server[json-server].
 
-
-{sp} +
+<<<
 
 == Architecture
 
-The json-server implements the client/server Use Case, with the client application
-making HTTP requests to the server and the server providing determined canned responses
+The json-server is the Server side of the Client/Server Use Case, with a Client application
+making HTTP requests to the Server and the json-server providing determined canned responses
 or simulated errors.
 
-When the server starts it will read a database of static
-JSON responses which we'll interact with later using the HTTPie JSON Client.
+When the json-server starts, it will read a database of static
+JSON responses which we'll work with later using the HTTPie JSON Client.
 
 Another Use Case for json-server is when you're developing a new application
 which depends on API's which are rate limited. One example of this is the
-http://openweathermap.org/api[Open Wearther Map] api. With the free tier
+http://openweathermap.org/api[Open Weather Map] api. With the free tier
 you're limited to a fixed number of calls in a sliding time window. You
-can capture the JSON results, add them to json-server database and play them back by
+can capture these kinds of JSON results, add them to json-server database and play them back
 making unlimited, unbounded requests.
 
 {sp} +
@@ -60,13 +66,9 @@ making unlimited, unbounded requests.
 .Client/Server interaction with the json-server
 image:json-server.png[Json Server]
 
-{sp} +
-{sp} +
+<<<
 
 == Installation
-
-{sp} +
-{sp} +
 
 The json-server is a JavaScript application which I hope won't scare off too
 many Java or Mule developers, certainly it won't scare any polyglots! The installation really is quite simple.
@@ -102,7 +104,7 @@ NOTE: If this is the first time you're installing NPM you may need to open a new
 {sp} +
 
 .Installing the JSON Server
-[shell]
+[listing]
 ----
 npm install -g json-server
 
@@ -121,7 +123,7 @@ that will be returned for client requests.
 {sp} +
 {sp} +
 
-=== Sample db.json database
+=== db.json database
 
 
 With json-server installed, create a folder where you plan to keep any sample data and project properties.
@@ -156,8 +158,10 @@ image:db-path.png[Folder structure]
 {sp} +
 {sp} +
 
+Using your favorite editor, enter the example json data below into the db.json file.
+
 [source,json]
-.db.json
+.db.json example data
 ----
 {
   "wines": [
@@ -171,9 +175,9 @@ image:db-path.png[Folder structure]
       "desc": "Sangiovese grape is famous for its dry, bright cherry character", "price": 147.99 }
   ],
   "comments": [
-    { "id": 1, "body": "like the added grape skins", "postId": 1 },
-    { "id": 1, "body": "the directions need to be clearer", "postId": 2 },
-    { "id": 3, "body": "I received 3 different packages of wood chips", "postId": 1 }
+    { "id": 1, "body": "like the added grape skins", "wineId": 1 },
+    { "id": 1, "body": "the directions need to be clearer", "wineId": 2 },
+    { "id": 3, "body": "I received 3 different packages of wood chips", "wineId": 1 }
   ],
   "profile": { "name": "vintnor" }
 }
@@ -186,17 +190,18 @@ image:db-path.png[Folder structure]
 
 With our sample data created lets start playing with the json-server.
 
-{sp} +
-{sp} +
+<<<
 
 == Interactions with json-server
 
 In this section we'll starting putting our json-server interactions into practical use.
 
-TIP: For a refresher on the usage of *HTTP Verbs* see this https://dzone.com/articles/the-simple-guide-to-http-verbs-patch-put-and-post[DZone article.]
+TIP: For a refresher on the usage of *HTTP Verbs* see this https://dzone.com/articles/the-simple-guide-to-http-verbs-patch-put-and-post[DZone HTTP verbs article.]
 
-From the json-server folder, run the following command:
+{sp} +
+{sp} +
 
+From within the json-server folder, we'll run a quick command to print out command line help, run the following command:
 
 {sp} +
 {sp} +
@@ -210,12 +215,12 @@ json-server -h
 {sp} +
 {sp} +
 
-As you can see there's lots of options for changing or overriding the defalut behaviors.
+As you can see there's lots of options for changing or overriding the default behaviors.
 
 {sp} +
 {sp} +
 
-CAUTION: On a Unix system, change the Windows backslash "\" to a Unix forward slash "/".
+CAUTION: On a Unix system, change the Windows backslash "\" to a Unix forward slash "/" in the examples that follow.
 
 {sp} +
 {sp} +
@@ -247,7 +252,7 @@ prepare for sending some command line requests.
 .Starting the json-server
 [listing]
 --
-json-server --watch json/db.json
+json-server --watch json\db.json
 --
 
 {sp} +
@@ -282,31 +287,32 @@ http://localhost:3000
 
 === HTTPie Examples
 
-To get started using HTTPie for the examples, you can download it
-using the link below.
+To install HTTPie for the examples we'll be working with, you can download it
+using this link - https://github.com/jakubroztocil/httpie[HTTPie Download].
 
 Feel free to use https://www.getpostman.com/[Postman] or curl from a https://git-scm.com/downloads[Git bash] terminal shell on Windows if you'de prefer.
 You should be able to adapt the HTTPie examples accordingly.
 
-https://github.com/jakubroztocil/httpie[HTTPie] is a https://curl.haxx.se/docs/manpage.html[curl] like command line tool which can be used from Unix and Windows.
+HTTPie is a https://curl.haxx.se/docs/manpage.html[curl] like command line tool which can be used from Unix and Windows.
 I like it better than curl because it comes loaded with lots of syntactic sugar.
 
 {sp} +
 {sp} +
 
-. Basic HTTPie usage
+.Basic example of HTTPie usage
 [listing]
 ----
-http localhost:3000/wines/1
+http localhost:3000/wines/1 <1>
 or
-http http://localhost:3000/wines/1
+http http://localhost:3000/wines/1 <2>
 ----
-
+<1> Short form
+<2> Long form
 {sp} +
 {sp} +
 
 Note that when HTTPie installs it will be called *http*, when you invoke it
-the command line, you can use or leave off the *http://* part of the URI,
+using the command line, you can use or leave off the *http://* part of the URI,
 it's your choice.
 
 {sp} +
@@ -316,7 +322,7 @@ it's your choice.
 
 Lets get started by hitting the default website from your browser.
 
-.Use browser to access website
+.Use browser to access json-server
 [listing]
 ----
 http://localhost:3000
@@ -326,16 +332,16 @@ http://localhost:3000
 {sp} +
 
 Under **Resources** you notice that _vintner_ has been misspelled as _vintnor_. You fix the
-typo using your favorite editor and save the file. Refreshing the link you notice that
+typo using your favorite editor to modify the line in *db.json* and save the file. Refreshing the link you notice that
 the change has already been picked up by json-server.
 
-Providing the **--watch* option told the json-server to run in development mode, watching
-and reloading changes.
+Providing the *--watch* option told the json-server to run in development mode, watching
+for and reloading changes.
 
 {sp} +
 {sp} +
 
-==== GET Request
+==== Making a GET Request
 
 
 .HTTP GET Requests
@@ -369,6 +375,14 @@ GET Requests
 |http localhost:3000/wines?id_ne=2
 |filter id=2
 
+|GET
+|http localhost:3000/wines?_embed=comments
+|embed all comments
+
+|GET
+|http localhost:3000/wines/1?_embed=comments
+|embed comments for ID=1
+
 |===
 
 _For more examples see the https://github.com/typicode/json-server[json-server] website_
@@ -376,7 +390,7 @@ _For more examples see the https://github.com/typicode/json-server[json-server] 
 {sp} +
 {sp} +
 
-==== POST Request
+==== Making a POST Request
 
 With POST we will add a new record to the database.
 
@@ -402,8 +416,8 @@ http POST localhost:3000/wines id=5 product="TWO BUCK CHUCK" price=2.99 desc="Sq
 |Request |URI |Result
 
 |POST
-|http localhost:3000/wines
-|All wine entries
+|http POST localhost:3000/wines ... (see above)
+|New wine entry with id=5
 
 |GET
 |http localhost:3000/wines
@@ -418,10 +432,10 @@ http POST localhost:3000/wines id=5 product="TWO BUCK CHUCK" price=2.99 desc="Sq
 {sp} +
 {sp} +
 
-==== PUT Request
+==== Making a PUT Request
 
 In our PUT example we'll make a change to *product*
-to the record we just added with POST.
+for the record we just added with POST.
 
 {sp} +
 {sp} +
@@ -445,7 +459,7 @@ http PUT localhost:3000/wines/5 product="TWO-ISH BUCK CHUCK" price=2.99 desc="Sq
 |Request |URI |Result
 
 |PUT
-|http localhost:3000/wines
+|http PUT localhost:3000/wines ... (see above)
 |All wine entries
 
 |GET
@@ -462,7 +476,7 @@ NOTE: If you don't enter all the fields, PUT will replace with just what you pro
 {sp} +
 {sp} +
 
-==== DELETE Request
+==== Finally, a DELETE Request
 
 To complete our example CRUD operations we'll delete the record with ID=5
 
@@ -497,14 +511,24 @@ http DELETE localhost:3000/wines/5
 
 |===
 
+{sp} +
+{sp} +
+
+Voila, the record is gone!
+
+There's lots more you can do with json-server including requests with additional verbs,
+adding middleware to include new features, enabling complex routing rules, sorting, filtering
+and much more.
+
 
 {sp} +
 {sp} +
 
-I hope you enjoyed reading this article as much as I have writing it, i'm looking forward to your feedback.
+I hope you enjoyed reading this article as much as I have writing it, I'm looking forward to your feedback.
 
 {sp} +
 {sp} +
+
 About the Author:
 
 https://www.linkedin.com/in/mitch-dresdner-785a46126/[Mitch Dresdner] is a Senior Mule Consultant at TerraThink
