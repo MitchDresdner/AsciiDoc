@@ -12,53 +12,80 @@ Mitch Dresdner <MDresdner@Terathink.com>
 :stylesdir: ./styles
 :scriptsdir: ./js
 // keywords added to html
-:keywords: jolokia, mule, agent, monitor, jmx
+:keywords: jolokia, mule, , hawtio, agent, monitor, jmx, mbean
 
 [abstract]
-A simple guide for integrating Mule ESB with https://jolokia.org/[Jolokia] agent plugin fast.
+A fast easy guide to integrating Mule ESB with the https://jolokia.org/[Jolokia] monitoring agent.
 
 [.text-center]
 image::JolokiaLogo.png[Jolokia]
 
 [.preamble]
-// Preamble goes here
+Monitoring made simple with Jolokia Mule plugin
 
 
-== Executive Summary
+== Summary
 
-Monitoring is an essential component for ensuring the proper functioning of Microservices. As complexity in software systems increases, it becomes more difficult to understand performance characteristics and troubleshoot problems. The monitoring tools we use may also need to change to adapt to new deployment strategies and environments.
+Monitoring is an essential component for ensuring the proper functioning of Microservices. As the complexity of software systems increases, it becomes more difficult to understand performance characteristics and to troubleshoot problems. The monitoring tools we use may also need to be adaptible to new deployment strategies and environments.
+
+Jolokia is a JMX-HTTP bridge giving an alternative to JSR-160 connectors. It's an agent based approach with support for many platforms. In addition to basic JMX operations it enhances JMX remoting with unique features like bulk requests and fine grained security policies.
 
 This paper describes how we might utilize Open Source Jolokia as a monitoring agent for Mule. The Mule ESB has historically used the Mule Management Console (MMC) to monitor internal flow and performance characteristics.
 
-As we start pushing out Mule runtime as container based solutions other embedded monitoring adjuncts might become more appropriate solutions. Here we consider Jolokia JMX Mule Agent plugin is another option to MMC for monitoring your Mule Microservice containers.
+As we start pushing out the Mule runtime as a container based solution, we'll need to give careful thought to an appropriate monitoring strategy. Here we'll consider one, the Jolokia JMX Mule Agent plugin.
 
-
-
-
-== Synopsis
-
-Jolokia is a JMX-HTTP bridge giving an alternative to JSR-160 connectors. It is an agent based approach with support for many platforms. In addition to basic JMX operations it enhances JMX remoting with unique features like bulk requests and fine grained security policies.
+<<<
 
 == Architecture
 
-Blah blah
+The Jolokia client runs as a browser based instance from a Jar implemenmtation to
+communicate with the monitoring server we'll embed in the Mule runtime. The
+Jolokia Agent is able to communicate over various protocols such as RMI, SOAP
+and JMX depicted in the diagram below.
 
 [.text-center]
 image::JolokiaArchitecture.png[JolokiaArchitecture,483,400]
 
-== Embedding Jolokia in Mule
+Mule monitoring information, propertied and statistics will be made available to the
+Jolokia Client through JMX Managed Beans (MBeans). The details are important if you
+plan to expose custom monitoring data to your clients.
+
+For more information on how to customize your data see the https://jolokia.org/documentation.html[Jokokia Documentation].
+
+
+<<<
+
+== Installation
+
+This installation will require two parts, the Jolokia Agent which we'll embed in the Mule Runtime and
+a client piece which will use Hawtio to provide browser access to the Jolokia agent.
+
+=== Embedding Jolokia in Mule
+
+
+NOTE: Start by downloading the Agent - https://jolokia.org/download.html[Jolokia Mule Download]
+
+
+The snapshot below shows the latest version I had pulled for this article, if the version has changed
+since then, download the latest version.
 
 image::JolokiaDownload.png[Jolokia – Download, 700, 390]
 
-=== Requirements
-.A Windows installation should meet the following requirements
-* 64bit Windows 10 Pro, Enterprise and Education (1511 November update, Build 10586 or later). In the future we will support more versions of Windows 10
-* The Hyper-V package must be enabled. The Docker for Windows installer will enable it for you, if needed. (This requires a reboot).
+{sp} +
+{sp} +
 
-Download the Jolokia Mule-Agent here -
+After downloading the Jolokia Mule Agent jar file, it needs to be stored in the Mule installation root folder, in $MULE_HOME/lib/opt/.
+{sp} +
+{sp} +
 
-NOTE: https://jolokia.org/download.html
+Next we'll embed the Jolokia Agent into the Mule default stub. Using your favorite editor go ahead
+and make the changes to the _mule-config.xml_, ensure that the XML namespace is consistent with
+the example.
 
+{sp} +
+{sp} +
+
+.Add the Jolokia Agent reference to the apps/default/mule-config.xml
 [listing]
 --
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
@@ -72,10 +99,12 @@ NOTE: https://jolokia.org/download.html
              http://www.mulesoft.org/schema/mule/management
        http://www.mulesoft.org/schema/mule/management/current/mule-management.xsd">
 
+    <--1-->
    <!-- Wire in Mule Jolokia Agent -->
    <custom-agent name="jolokia-agent" class="org.jolokia.mule.JolokiaMuleAgent">
       <spring:property name="port" value="8899"/>
 
+    <--2-->
 	  <!-- Uncomment to enable access control
 
 	    <spring:property name="user" value="mulokia"/>
@@ -86,6 +115,115 @@ NOTE: https://jolokia.org/download.html
    </custom-agent>
 </mule>
 --
+<1>  Add the reference for the Jolokia Agent in
+<2> To enable access control
 
+
+With the mule-config.xml file updated with the reference to the *jolokia-agent*, we can open the firewall port the agent listens on and send a request from the browser.
+
+{sp} +
+{sp} +
+
+.Agent Port
 [listing]
+--
 Open port 8899 for Jolokia agent
+--
+
+{sp} +
+{sp} +
+
+The procedure for opening the port will be different depending on whether your application is running in AWS, a Docker container, standalone Unix instance or your desktop/laptop.
+I'll leave it as an exercise for you to solve with Google, if you really need help add a comment with your patform information and what you've tried.
+
+{sp} +
+{sp} +
+
+=== Download Hawtio client
+
+Use the link below to download the Hawtio Application from the link below.
+
+NOTE: Download the http://hawt.io/getstarted/[Hawtio App]
+
+Whew, that was easy!  Let move on to configuring and starting.
+
+{sp} +
+{sp} +
+
+=== Configure Hawtio
+
+Lets start by configuring a script that will start up the Hawtio. Using whatever process you use to
+find your support Jars, add the Hawtio App jar you just downloaded to that location. Here's an example script I use to start
+the Hawtio App:
+
+{sp} +
+{sp} +
+
+.Hawtio batch file _hawt.bat_
+[listing]
+--
+%echo off%
+set HAWT_PATH=/Tools/Java/Jars/hawtio-app-1.5.4.jar <1>
+set HAWT_PORT=8087<2>
+
+java  -Dhawtio.proxyWhitelist=* -Dhawtio.authenticationEnabled=false -jar %HAWT_PATH% --port %HAWT_PORT%
+--
+<1> I keep my non Maven/Gradle service Jars in c:\Tools\java\Jars, you can use Unix file path naming conventions and Java will find them
+<2> Pick a free port number for Jetty to use for the Hawtio application
+
+These same notes apply to the Bash script for Unix users below.
+
+
+.Hawtio script file _hawt_
+[listing]
+--
+#!/bin/bash
+export HAWT_PATH=$HOME/Java/Jars/hawtio-app-1.5.4.jar
+export HAWT_PORT=8087
+
+java  -Dhawtio.proxyWhitelist=* -Dhawtio.authenticationEnabled=false -jar $HAWT_PATH --port $HAWT_PORT
+--
+
+
+
+<<<
+
+== Starting Hawtio
+
+Hawtio will start up a Jetty server on the port you specified in the configuration, then
+it will start a browser session connecting to the startup URI.
+
+.Run your script
+[listing]
+--
+hawt
+--
+
+The *Welcome* page serves to get beginners oriented with Hawtio, click on the *Connect* menu option.
+
+{sp} +
+{sp} +
+
+.Jolokia connection settings
+[.text-center]
+image::Hawtio-connect.png[Hawtio Connection Paramenters]
+
+If your Mule instance isn't local, be sure to enter the Domain Name or IP address and make sure port 8899 is open on the Mule host.
+
+Now for the fun part, when your connection request succeeds, you'll get a new brwoser display like this:
+
+.Hawtio Main screen
+[.text-center]
+image::Hawt-Main.png[Hawtio Connection Paramenters]
+
+Hawtio supports various plugins that you can add to the application. Feel free to explore the various menu options and get
+familiar with all the capabilities.
+
+I hope you enjoyed reading this article as much as I have enjoyed writing it, i'm looking forward to your comments!
+
+{sp} +
+{sp} +
+
+About the Author:
+
+https://www.linkedin.com/in/mitch-dresdner-785a46126/[Mitch Dresdner] is a Senior Mule Consultant at TerraThink
