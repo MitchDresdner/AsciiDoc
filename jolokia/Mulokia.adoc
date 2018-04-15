@@ -1,4 +1,4 @@
-= Using Jolokia with Mule ESB
+= Using Jolokia and Hawtio with Mule ESB
 Mitch Dresdner <MDresdner@Terathink.com>
 :toc:                                             // Enable table of contents [left, right]
 :toc-placement: preamble
@@ -15,10 +15,12 @@ Mitch Dresdner <MDresdner@Terathink.com>
 :keywords: jolokia, mule, , hawtio, agent, monitor, jmx, mbean
 
 [abstract]
-A fast easy guide to integrating Mule ESB with the https://jolokia.org/[Jolokia] monitoring agent.
+A fast easy guide to integrating Mule ESB with the https://jolokia.org/[Jolokia] monitoring agent and http://hawt.io/[Hawtio].
 
 [.text-center]
-image::JolokiaLogo.png[Jolokia]
+image::3Logos.png[Jolokia]
+//image::MuleSoftLogo.png[Mule,200]
+//image::hawtio-logo.svg[Hawtio,200]
 
 [.preamble]
 Monitoring made simple with Jolokia Mule plugin
@@ -74,7 +76,7 @@ image::JolokiaDownload.png[Jolokia – Download, 700, 390]
 {sp} +
 {sp} +
 
-After downloading the Jolokia Mule Agent jar file, it needs to be stored in the Mule installation root folder, in $MULE_HOME/lib/opt/.
+After downloading the Jolokia Mule Agent jar file, it needs to be stored in the Mule installation root optional libs folder (in $MULE_HOME/lib/opt/).
 {sp} +
 {sp} +
 
@@ -85,7 +87,7 @@ the example.
 {sp} +
 {sp} +
 
-.Add the Jolokia Agent reference to the apps/default/mule-config.xml
+.Add the following Jolokia Agent reference to the apps/default/mule-config.xml
 [listing]
 --
 <mule xmlns="http://www.mulesoft.org/schema/mule/core"
@@ -115,7 +117,7 @@ the example.
    </custom-agent>
 </mule>
 --
-<1>  Add the reference for the Jolokia Agent in
+<1> Add the reference for the Jolokia Agent in
 <2> To enable access control
 
 
@@ -124,7 +126,7 @@ With the mule-config.xml file updated with the reference to the *jolokia-agent*,
 {sp} +
 {sp} +
 
-.Agent Port
+.Open Agent firewall Port
 [listing]
 --
 Open port 8899 for Jolokia agent
@@ -210,11 +212,11 @@ image::Hawtio-connect.png[Hawtio Connection Paramenters]
 
 If your Mule instance isn't local, be sure to enter the Domain Name or IP address and make sure port 8899 is open on the Mule host.
 
-Now for the fun part, when your connection request succeeds, you'll get a new brwoser display like this:
+Now for the fun part, when your connection request succeeds, you'll get a new browser display like this:
 
 .Hawtio Main screen
 [.text-center]
-image::Hawt-Main.png[Hawtio Connection Paramenters]
+image::Hawt-Main.png[Hawtio Main Screen]
 
 Hawtio supports various plugins that you can add to the application. Feel free to explore the various menu options and get
 familiar with all the capabilities.
