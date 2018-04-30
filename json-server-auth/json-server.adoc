@@ -1,0 +1,398 @@
+= Basic Authentication for json-server
+Mitch Dresdner <MDresdner@Terathink.com>
+:toc:                                             // Enable table of contents [left, right]
+:toc-placement: preamble
+:appversion: 1.0.0
+// A link as attribute
+:fedpkg: https://apps.fedoraproject.org/packages/asciidoc
+// Example of other attributes
+:imagesdir: ./img
+:icons: font
+// Default icon dir is images/icons, can override using :iconsdir: ./icons
+:stylesdir: ./styles
+:scriptsdir: ./js
+// keywords added to html
+:keywords: REST, json, node, npm, javascript, basic auth
+
+// enable btn:
+:experimental:
+
+[abstract]
+Enabling Basic Authentication in your json-server
+
+{sp} +
+
+Simple approach for adding authentication to your requests
+
+== Summary
+
+In my last DZone article on https://dzone.com/articles/zero-code-rest-with-json-server[Zero Code REST with json-server] I showed you how to
+standup a REST server with minimal effort and _no coding_.
+
+While this approach may work well in many situations, you often find that you'll to need extend capabilities, so you'll soon roll up you sleves
+and start bending some code. The fun stuff!
+
+This article will share an approach for adding authentication to https://github.com/typicode/json-server[json-server] using a simple, unobtrusive
+Express middleware component called http://www.passportjs.org/[Passport].
+
+<<<
+
+== Architecture
+
+Most sites require users to register and then use their credentials for access. Passport provides the layers necessary for authenticating
+claims made by users logging in to the site.
+
+image:Passport-Auth.png[User Registration]
+
+https://en.wikipedia.org/wiki/Basic_access_authentication[Basic Authentication] is the simplest form of authenticating users, consisting of a
+user name and a secret password. Being the simplest, it's arguably also the weakest form and vulnerable to intercept and exploitation when
+not used with secure transports.
+
+The intent of this article is to share how we can start moving from plain text unauthenticated methods of communicating with our json-server to
+more robust solutions. Passport provides an extensible set of plugins known as _strategies_ which will help you to do just that. At the time of
+this writing there are nearly 500 authentication strategies to choose from including:
+
+- Basic Authentication
+- Facebook
+- Twitter
+- Google
+- LinkedIn
+
+Strategies can range from verifying username and password credentials, delegated authentication using http://oauth.net/[OAuth] (using http://www.facebook.com/[Facebook]
+or http://twitter.com/[Twitter]), or federated authentication using http://openid.net/[OpenID].
+
+{sp} +
+{sp} +
+
+
+<<<
+
+== Passport Strategy
+
+Passport strategies are generally of the following form:
+
+.Example Passport Strategy
+[listing]
+----
+passport.use(new Strategy(
+  function(username, password, cb) { <1>
+    db.users.findByUsername(username, function(err, user) { <2>
+      if (err) { return cb(err); } <3>
+      if (!user) { return cb(null, false); } <4>
+      if (user.password != password) { return cb(null, false); } <5>
+      return cb(null, user);
+    });
+  }));
+----
+<1> Authentication credentials
+<2> Callback to verify access
+<3> Error handling
+<4> User Verification
+<5> Password authentication
+
+{sp} +
+{sp} +
+
+We'll now integrate passport authentication with the json-server we created in the last article.
+
+{sp} +
+{sp} +
+
+CAUTION: For the sake of brevity and focusing on authentication, this example doesn't use https://en.wikipedia.org/wiki/Transport_Layer_Security[TLS] as any real world application should.
+
+{sp} +
+{sp} +
+
+
+== Configuring  User Authentication
+
+Passport author Jared Hanson, provides us with many a good examples of Strategy implementation, as
+good OO practitioners we'll follow the mantra to _reuse_ rather than _reinvent_,
+leveraging his https://github.com/passport/express-3.x-http-basic-example[Basic Authentication example].
+{sp} +
+{sp} +
+
+Our new folder hierarchy now includes a _db_ folder, simulating a database containing authentication
+credentials.
+
+.Passport authentication support
+image:db-folder.png[User Registration]
+
+{sp} +
+{sp} +
+
+
+=== index.js Listing
+
+.index.js
+[listing]
+--
+exports.users = require('./users');
+--
+
+=== users.js Listing
+
+.users.js
+[listing]
+--
+var records = [
+    { id: 1, username: 'jack', password: 'secret', displayName: 'Jack', emails: [ { value: 'jack@example.com' } ] }
+  , { id: 2, username: 'jill', password: 'birthday', displayName: 'Jill', emails: [ { value: 'jill@example.com' } ] }
+];
+
+exports.findByUsername = function(username, cb) {
+  process.nextTick(function() {
+    for (var i = 0, len = records.length; i < len; i++) {
+      var record = records[i];
+      if (record.username === username) {
+        return cb(null, record);
+      }
+    }
+    return cb(null, null);
+  });
+}
+--
+
+<<<
+
+== Configuring  NPM packaging
+
+In our earlier Zero Code example, we were able to start the json-server with static
+assets in our project hierarchy. As we add custom code we'll need a way of leting NPM
+know about our project dependencies. This is accomplished by adding _package.json_.
+
+.package.json
+[listing]
+--
+{
+  "name": "custom-json-server",
+  "version": "1.0.0",
+  "description": "Custom json-server",
+  "main": "server.js",
+  "dependencies": {
+    "json-server": "^0.12.1",     <1>
+    "passport": "^0.2.2",         <2>
+    "passport-http": "^0.3.0"     <
+  },
+  "devDependencies": {
+    "json-server": "^0.12.1"
+
+  },
+  "scripts": {
+    "serve": "node server.js --watch ./json/db.json",   <3>
+    "test":       "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "json",
+    "api"
+  ],
+  "author": "M. Dresdner",
+  "license": "MIT"
+}
+--
+<1> json-server dependencies
+<2> Passport dependencies
+<3> Script for starting our server
+
+
+{sp} +
+{sp} +
+
+After creating the _package.json_ we'll need to install the required packages. This is
+accomplished by running the _npm install_ command or the short form _npm i_.
+
+.npm install
+[listing]
+--
+npm i
+--
+
+You should see npm pull down all the required packages and save them into folder _node_modules_.
+
+With json-server and passport packages installed we turn our attention toward creating our
+custom code _json-server_.
+
+{sp} +
+{sp} +
+
+
+<<<
+
+== Configuring Server.json
+
+Our customized rendition of json-server allows for additional middleware products in our
+json-server implementation. To add the _Basic Authentication_ support, we start with the
+sample code described in the _Module_ section of the https://github.com/typicode/json-server[json-server]
+website and add our references to Passport.
+
+{sp} +
+{sp} +
+
+.server.json
+[listing]
+--
+const jsonServer = require('json-server')
+const server = jsonServer.create()
+const path = require('path')
+const router = jsonServer.router(path.join(__dirname, './json/db.json'))
+
+const middlewares = jsonServer.defaults()
+
+var passport = require('passport');   <1>
+var Strategy = require('passport-http').BasicStrategy;
+var db = require('./db/index');
+
+
+// Configure the Basic strategy for use by Passport.    <2>
+passport.use(new Strategy(
+  function(username, password, cb) {
+    db.users.findByUsername(username, function(err, user) {
+      if (err) { return cb(err); }
+      if (!user) { return cb(null, false); }
+      if (user.password != password) { return cb(null, false); }
+      return cb(null, user);
+    });
+  }));
+
+// http -a jack:secret localhost:3000/email     <3>
+server.get('/email',
+  passport.authenticate('basic', { session: false }),
+  function(req, res) {
+    res.json({ username: req.user.username, email: req.user.emails[0].value });
+  });
+
+
+// Create a new Express application.
+//var app = express();
+
+server.use(middlewares)
+
+
+// http localhost:3000/wines
+server.use(router)
+server.listen(3000, () => {
+  console.log('JSON Server is running on 3000')
+})
+--
+<1> Bring in Passport support
+<2> configure our Basic Authentication strategy
+<3> Add a new Express handler for authenticating a new request
+
+{sp} +
+{sp} +
+
+With the integration of Passport with json-server complete,  Passport should now be configured to validate a new route request to _/email_.
+
+Let's start up the json server and see if we broke anything in our latest refactorings.
+
+.start json-server
+[listing]
+--
+npm run serve
+--
+
+{sp} +
+{sp} +
+
+Since we now have a custom json-server implementation, we start it using the script (above)
+that we added earlier in our _package.json_.
+
+When the json-server starts you see the message _JSON Server is running on 3000_.
+
+We can now send some test messages with _httpie_.
+
+{sp} +
+{sp} +
+
+
+.Regression testing
+[listing]
+--
+http localhost:3000/wines
+--
+
+{sp} +
+{sp} +
+
+If all went well you should see the familiar response to _all wines_ from json-server.
+
+{sp} +
+{sp} +
+
+.Authentication test
+[listing]
+--
+http -a jack:secret localhost:3000/email
+--
+
+{sp} +
+{sp} +
+
+If all went well you should see the following response -
+
+.Authentication response
+[listing]
+--
+HTTP/1.1 200 OK
+Connection: keep-alive
+Content-Length: 55
+Content-Type: application/json; charset=utf-8
+Date: Mon, 30 Apr 2018 18:06:27 GMT
+ETag: W/"37-lew270BaMoufxDP6PMJe/Pp2Pys"
+X-Powered-By: Express
+
+{
+    "email": "jack@example.com",
+    "username": "jack"
+}
+
+--
+
+{sp} +
+{sp} +
+
+Next, well mess with the password and try again.
+
+.Authentication failure
+[listing]
+--
+http -a jack:Xsecret localhost:3000/email
+--
+
+{sp} +
+{sp} +
+
+As expected we get an authentication failure.
+
+.Authentication failure response
+[listing]
+--
+HTTP/1.1 401 Unauthorized
+Connection: keep-alive
+Content-Length: 12
+Date: Mon, 30 Apr 2018 18:08:45 GMT
+WWW-Authenticate: Basic realm="Users"
+X-Powered-By: Express
+
+Unauthorized
+--
+
+{sp} +
+{sp} +
+
+That was useful and a bit of fun, for your next steps I expect you may want to try another _Passport Strategy_ like
+_Google_ or _LinkedIn_ authentication!
+
+Passport's pluggable authentication greatly simplifies a complex, arduous and oft times error prone process.
+
+{sp} +
+{sp} +
+
+I hope you've enjoyed reading this article as much as I have writing it and am looking forward to your feedback.
+
+{sp} +
+{sp} +
+
+About the Author:
+
+https://www.linkedin.com/in/mitch-dresdner-785a46126/[Mitch Dresdner] is a Senior Mule Consultant at TerraThink
