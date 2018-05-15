@@ -1,0 +1,35 @@
+Swagger 2.0
+http://petstore.swagger.io/
+http://petstore.swagger.io/v2/swagger.json
+
+# RAML
+https://raml.org/developers/raml-200-tutorial
+
+
+# Docker converter
+https://github.com/mulesoft/oas-raml-converter-service
+http POST 10.193.142.248:3000/swagger/to/raml Content-type:text/plain @PetStore.json
+
+# --proxy=http:http://proxy.foo.bar:80 
+http  10.193.142.248:3000/swagger/to/raml   url==http://petstore.swagger.io/v2/swagger.json
+
+# Node Converter
+https://github.com/mulesoft/oas-raml-converter
+
+node C:\Home\Dev\js\oas-raml-converter\lib\bin\converter.js --from OAS20 --to RAML ./path/to/swagger.json > output.raml
+
+# Go yaml2json converter
+https://github.com/wakeful/yaml2json
+
+C:\Home\Dev\Go\src\yaml2json> yaml2json -version
+
+yaml2json C:\Home\Doc\yaml\file.yaml | jq . > C:\Home\Doc\json\file.json
+
+# jq
+https://stedolan.github.io/jq/
+
+# escaping a path with a slash in the name - .paths./pet.post
+jq ".paths.\"/pet\".post" PetStore.json
+
+# indexing array, retrieve value
+jq ".tags[0].name" PetStore.json
