@@ -1,0 +1,270 @@
+= Converting Swagger to RAML
+Mitch Dresdner <MDresdner@Terathink.com>
+:toc:                                             // Enable table of contents [left, right]
+:toc-placement: preamble
+:appversion: 1.0.0
+// A link as attribute
+:fedpkg: https://apps.fedoraproject.org/packages/asciidoc
+// Example of other attributes
+:imagesdir: ./img
+:icons: font
+// Default icon dir is images/icons, can override using :iconsdir: ./icons
+:stylesdir: ./styles
+:scriptsdir: ./js
+// keywords added to html
+:keywords: mule, raml, swagger, oas, node, npm, docker
+
+// enable btn:
+:experimental:
+
+[abstract]
+JSON tooling and model conversion
+
+{sp} +
+
+[.preamble]
+Converters and tooling examples
+
+== Summary
+
+This article will help you experiment with some basic conversions between Swagger and RAML including:
+
+.JSON tooling and conversion experiments
+* Standalone NPM converter
+* Converting from a Docker container
+* Converting YAML to JSON with a Go utility
+* Using jq for XPath like querying of JSON
+
+{sp} +
+
+.Open API Specification (OAS)
+[NOTE]
+===============================
+*Swagger* _aka_ *OAS*
+
+Swagger and OAS will be used interchangably in this tutorial.
+===============================
+
+As you can see we have our work cut out for us, let's roll up our sleeves and get to work!
+
+{sp} +
+
+== Conversion examples
+
+This article assumes some basic familiarity with modeling JSON API's using Swagger and RAML, for those
+needing a bit of a refresher, please refer to the links below.
+
+.Refresher on Swagger and RAML
+* https://raml.org/developers/raml-200-tutorial[Click for RAML tutorial]
+* https://swagger.io/docs/[Click for Swagger tutorial]
+
+{sp} +
+
+My earlier DZone article https://dzone.com/articles/zero-code-rest-with-json-server[Zero Code REST With json-server] has instructions to help you
+install and get started with https://nodejs.org/en/[NPM] and https://github.com/jakubroztocil/httpie[HTTPie] if you're not aleady familiar.
+With those packages installed, we can add the other necessary components.
+
+Installing the necessary dependencies for getting started.
+
+=== Mulesoft OAS RAML Converter
+
+https://github.com/mulesoft/oas-raml-converter[OAS RAML Converter] is a Mulesoft project which you can use for OAS/RAML conversions.
+We'll clone the git project, install dependencies, build the javascript project and manually run the converter.
+
+.Clone repo and build converter
+[listing]
+--
+git clone https://github.com/mulesoft/oas-raml-converter.git
+
+npm install
+npm run build
+--
+
+{sp} +
+
+With the OAS RAML Converter installed, lets run a conversion from Swagger to RAML. In our examples we'll use the Swagger Petstore.json, so lets
+download that next.
+
+[listing]
+--
+http --download http://petstore.swagger.io/v2/swagger.json--proxy=http:http://proxy.foo.bar:80
+
+node lib\bin\converter.js --from OAS20 --to RAML ./swagger.json > petstore.raml
+--
+
+{sp} +
+
+.Proxy support
+[NOTE]
+===============================
+**--proxy=http:http://proxy.foo.bar:80**
+
+If you're behind a firewall, you may need to add the proxy switch above to the HTTPie command line, with your proxy server address.
+===============================
+
+{sp} +
+
+If all went well, the swagger.json was converted into petstore.raml.
+
+Mulesoft hosts an https://mulesoft.github.io/oas-raml-converter/[online conversion website] if you prefer not to
+install the local Javascript component.
+
+{sp} +
+
+.If you would like to install the converter globally run the commands below.
+[listing]
+--
+npm install -g oas-raml-converter
+
+oas-raml-converter --help
+
+--
+
+{sp} +
+
+.Converting between Swagger and OAS.
+[listing]
+--
+oas-raml-converter --from OAS20 --to RAML ./path/to/swagger.json
+oas-raml-converter --from OAS20 --to RAML ./path/to/swagger.json > petstore.raml
+
+oas-raml-converter --from RAML --to OAS20 ./path/to/petstore.raml > swagger.json
+--
+Be sure to use _lib\bin\converter.js_ if you didn't install oas-raml-converter globally.
+
+{sp} +
+
+=== Mulesoft Docker converter
+
+Mulesoft also has a Docker version of the converter that you can learn more about https://github.com/mulesoft/oas-raml-converter-service[here]
+
+.Cloning the repository and starting the Docker container.
+[listing]
+--
+git clone https://github.com/mulesoft/oas-raml-converter-service
+
+docker build -t oas-raml-converter:0.1 .
+
+docker run -i -p 3000:3000 -t oas-raml-converter:0.1 /bin/bash
+--
+
+{sp} +
+With the docker container running and firewall port 3000 open if you're running remote, lets convert
+our earlier _swagger.json_ file into RAML.
+
+.Using the Docker converter to convert OAS to RAML
+[listing]
+--
+http POST YOUR_DOCKER_IP_ADDRESS:3000/swagger/to/raml Content-type:text/plain @swagger.json > petstore.raml
+--
+
+{sp} +
+
+
+== Tooling examples
+
+{sp} +
+
+=== Using JSON Query (jq)
+
+https://stedolan.github.io/jq/[JSON Query] is descibed as a flexible, light weight command line processor for performing
+Xpath like queries on JSON data. After using the link above to install it, lets run some simple queries on our _swagger.json_ file.
+
+.Verify jq was properly installed
+[listing]
+--
+jq --help
+--
+_Display current version and commandline options_
+
+{sp} +
+
+When you use the Windows _type_ or Linux _cat_ command to display *swagger.json*, you'll notice that the entire file is on
+a single line. To pretty print the file we can use the _jq_ identity function.
+
+.Pretty print swagger.json
+[listing]
+--
+jq . swagger.json
+--
+
+{sp} +
+
+You can also use jq to extract snippets of JSON or perform a myriad of mathematical and utility functions on the data
+See jq manual https://stedolan.github.io/jq/manual/[here].
+
+.Extract a JSON snippet
+[listing]
+--
+jq ".tags" swagger.json
+--
+
+
+.Extract an element
+[listing]
+--
+jq ".tags[0].name" swagger.json
+--
+
+.Escape special characters to handle JSON paths
+[listing]
+--
+jq ".paths.\"/pet\".post" swagger.json
+--
+
+Produces a JSON snippet of the /pet URI for a POST operation. The slash
+is a special character in _jq_ and needs to be escaped with the quotes.
+
+{sp} +
+
+=== Converting YAML to JSON
+
+Sometimes you may find that you have the YAML version of a Swagger API specification which you need the JSON
+equivalent for in order to generate RAML. Here's a nifty conversion utility written in Golang, which can be used
+to generate the JSON schema.
+
+You'll need to clone the git repository to your _GOPATH_, build and install. For a quick start guide to getting up
+and running with Go, see this turorial https://golang.org/doc/install[here].
+
+.Cloning the repository and installing the Golang converter.
+[listing]
+--
+cd %GOPATH%\src
+
+git clone https://github.com/wakeful/yaml2json
+
+cd yaml2json
+
+go build
+
+go install
+
+yaml2json -version
+--
+
+{sp} +
+
+.Converting a YAML file to JSON
+[listing]
+--
+yaml2json PATH_TO_YOUR\file.yaml | jq . > PATH_TO_YOUR\file.json
+--
+
+{sp} +
+
+There we have it, in this example we pipe the output to JSON Query using an identity function to prettify the output,
+then redirect the output to our new JSON file.
+
+This concludes our brief examples with conversions and tooling.
+
+{sp} +
+
+I hope you enjoyed reading this article as much as I have enjoyed writing it, i'm looking forward to your comments!
+
+{sp} +
+{sp} +
+
+
+About the Author:
+
+https://www.linkedin.com/in/mitch-dresdner-785a46126/[Mitch Dresdner] is a Senior Mule Consultant at TerraThink
