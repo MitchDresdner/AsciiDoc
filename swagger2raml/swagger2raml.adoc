@@ -32,7 +32,7 @@ This article will help you experiment with some basic conversions between Swagge
 {sp} +
 
 [.text-center]
-image::s2r-banner.png[Swagger2RAML]
+image::s2rd-banner.png[Swagger2RAML]
 
 {sp} +
 
@@ -148,6 +148,9 @@ Be sure to use _lib\bin\converter.js_ if you didn't install oas-raml-converter g
 === Mulesoft Docker converter
 
 Mulesoft also has a Docker version of the converter that you can learn more about https://github.com/mulesoft/oas-raml-converter-service[here]
+
+[.text-left]
+image::s2rd-transform.png[Swagger2RAMLXfrm,200]
 
 .Cloning the repository and starting the Docker container.
 [listing]
