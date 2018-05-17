@@ -27,13 +27,22 @@ Converters and tooling examples
 
 == Summary
 
-This article will help you experiment with some basic conversions between Swagger and RAML including:
+This article will help you experiment with some basic conversions between Swagger and RAML and explore some tooling using some cool technologies.
+
+{sp} +
+
+[.text-center]
+image::s2r-banner.png[Swagger2RAML]
+
+{sp} +
 
 .JSON tooling and conversion experiments
 * Standalone NPM converter
-* Converting from a Docker container
+* Conversion using a Docker container
 * Converting YAML to JSON with a Go utility
 * Using jq for XPath like querying of JSON
+
+As you can see from the list above we have our work cut out for us, let's roll up our sleeves and get to work!
 
 {sp} +
 
@@ -45,7 +54,6 @@ This article will help you experiment with some basic conversions between Swagge
 Swagger and OAS will be used interchangably in this tutorial.
 ===============================
 
-As you can see we have our work cut out for us, let's roll up our sleeves and get to work!
 
 {sp} +
 
@@ -64,12 +72,15 @@ My earlier DZone article https://dzone.com/articles/zero-code-rest-with-json-ser
 install and get started with https://nodejs.org/en/[NPM] and https://github.com/jakubroztocil/httpie[HTTPie] if you're not aleady familiar.
 With those packages installed, we can add the other necessary components.
 
-Installing the necessary dependencies for getting started.
+In the steps below we'll be installing the necessary dependencies for getting started.
 
 === Mulesoft OAS RAML Converter
 
 https://github.com/mulesoft/oas-raml-converter[OAS RAML Converter] is a Mulesoft project which you can use for OAS/RAML conversions.
 We'll clone the git project, install dependencies, build the javascript project and manually run the converter.
+
+[.text-left]
+image::s2r-transform.png[Swagger2RAMLXfrm,200]
 
 .Clone repo and build converter
 [listing]
@@ -82,12 +93,12 @@ npm run build
 
 {sp} +
 
-With the OAS RAML Converter installed, lets run a conversion from Swagger to RAML. In our examples we'll use the Swagger Petstore.json, so lets
+With the OAS RAML Converter installed, lets run a conversion from Swagger to RAML. In our examples we'll use the Petstore _swagger.json_, so lets
 download that next.
 
 [listing]
 --
-http --download http://petstore.swagger.io/v2/swagger.json--proxy=http:http://proxy.foo.bar:80
+http --download http://petstore.swagger.io/v2/swagger.json
 
 node lib\bin\converter.js --from OAS20 --to RAML ./swagger.json > petstore.raml
 --
@@ -170,6 +181,9 @@ http POST YOUR_DOCKER_IP_ADDRESS:3000/swagger/to/raml Content-type:text/plain @s
 https://stedolan.github.io/jq/[JSON Query] is descibed as a flexible, light weight command line processor for performing
 Xpath like queries on JSON data. After using the link above to install it, lets run some simple queries on our _swagger.json_ file.
 
+[.text-left]
+image::jq.png[JSONQuery,75]
+
 .Verify jq was properly installed
 [listing]
 --
@@ -226,12 +240,15 @@ to generate the JSON schema.
 You'll need to clone the git repository to your _GOPATH_, build and install. For a quick start guide to getting up
 and running with Go, see this turorial https://golang.org/doc/install[here].
 
+[.text-left]
+image::Golang.png[GO,75]
+
 .Cloning the repository and installing the Golang converter.
 [listing]
 --
 cd %GOPATH%\src
 
-git clone https://github.com/wakeful/yaml2json
+go get -u github.com/wakeful/yaml2json
 
 cd yaml2json
 
@@ -241,6 +258,8 @@ go install
 
 yaml2json -version
 --
+
+_GOPATH\bin will need to be in your PATH_
 
 {sp} +
 
