@@ -1,0 +1,400 @@
+= Dockerize your Mulesoft API's
+Mitch Dresdner <MDresdner@Terathink.com>
+:toc:                                             // Enable table of contents [left, right]
+:toc-placement: preamble
+:appversion: 1.0.0
+// A link as attribute
+:fedpkg: https://apps.fedoraproject.org/packages/asciidoc
+// Example of other attributes
+:imagesdir: ./img
+:icons: font
+// Default icon dir is images/icons, can override using :iconsdir: ./icons
+:stylesdir: ./styles
+:scriptsdir: ./js
+// keywords added to html
+:keywords: docker, mule, mmc, deploy, microservice, monitoring
+
+// enable btn:
+:experimental:
+
+[abstract]
+Containerizing your Mule MicroService applications
+
+{sp} +
+
+[.preamble]
+// Preamble goes here
+
+
+image::business-commerce-container-379964.jpg[Containers in action,700]
+
+== Summary
+
+In his 24 May 2018 blog post, Aaron Landgraf shares a broad brush of capabilities in the Mule Titan release https://blogs.mulesoft.com/dev/anypoint-platform-dev/may-2018-titan-release/[_full story here_].
+
+Landgraf describes the new _Anypoint Runtime Fabric_ for creating, deploying and managing Mule containers in the Cloud, see excerpt below.
+
+{sp} +
+
+[NOTE]
+====
+_Anypoint Runtime Fabric is a container service that makes it easy to manage multi-cloud deployments of Mule runtimes and to deploy multiple runtime
+versions on the same Runtime Fabric. By leveraging Docker and Kubernetes, Anypoint Runtime Fabric drastically simplifies the deployment and management
+of Mule runtimes on Microsoft Azure, Amazon Web Services (AWS), virtual machines (VMs), and physical servers. Isolate apps, scale horizontally,
+and redeploy with zero downtime._
+====
+
+{sp} +
+Our project shares many similar goals articulated above, but is limited to achieving them with a more austere set of tools. This article will
+share how we Dockerize our Mulesoft 3.9 Enterprise edition and deploy in AWS.
+
+{sp} +
+
+== Architecture
+
+Our target Architecture will consist of deploying Mule applications from AnypointStudio into Docker containers running inside an AWS AMI image.
+
+{sp} +
+
+image::MuleContainers.png[Mule in AWS,540]
+
+{sp} +
+
+In the steps below you'll configure an AWS EC2 instance and configure the environment for Docker. With Docker installed you'll
+create images for Mule and MMC, run the containers, associate the Mule runtime with the MMC and deploy a simple _Hello Mule_ application.
+
+Docker containers are ephemeral by nature, which means that any changes to container state will be lost when a container is
+stopped. This isn't desirable and a quick remedy will be to use Docker volumes to persist and changes we need between container
+starts. The information which will be stateful is specified by the *VOLUME* tag in the Docker files below.
+
+{sp} +
+
+== Prerequisites
+
+We assume you're familiar with Mule and have some familiarity setting up EC2 instances in AWS.
+
+If you're not confident with AWS or would like a little refresher please review the following articles:
+
+{sp} +
+
+.Some refreshers before getting started
+* https://dzone.com/articles/provision-a-free-aws-ec2-instance-in-5-minutes[Provision a free tier EC2 instance]
+* https://docs.docker.com/install/#cloud[Configure Docker on your EC2 instance]
+
+{sp} +
+
+=== Caveats
+[CAUTION]
+--
+Some AWS services will incur charges, be sure to stop and/or terminate any services you aren't using. Additionaly,
+consider setting up https://aws.amazon.com/about-aws/whats-new/2012/05/10/announcing-aws-billing-alerts/[billing alerts]
+to warn you of charges exceeding a threshold that may caus you concern.
+
+--
+
+== Configuration
+
+We begin by copying the distribution files for MMC and Mule runtime to our EC2 instance, it will probably
+be easiest to use _wget_ from the EC2 instance to download them directly. Other options include _scp_ from
+your development environment or copy from an S3 bucket. Use the approach you feel most comfortable with.
+
+In my EC2-User home folder I use the following hierarchy for my Dockerfile source:
+
+.Folder structure for builds
+[listing]
+--
+ls src/docker/mule
+
+  MMC-3.8.0  MuleEE-3.9.0
+
+ls src/docker/mule/MMC-3.8.0
+
+  Dockerfile  mmc-3.8.x-web.tar.gz  start.sh
+
+ls src/docker/mule/MuleEE-3.9.0
+
+  Dockerfile  mule-enterprise-standalone-3.9.0  mule-ee-distribution-standalone-3.9.0.tar.gz
+
+--
+
+{sp}+
+Note that the tar file has been expanded and we have a folder for *mule-enterprise-standalone-3.9.0*.
+
+The reason for this is that I install our custom EE license, make any changes to configuration files
+unique to our environments and repackage the tar file for creation of the Mule Docker image.
+
+https://docs.mulesoft.com/mule-user-guide/v/3.9/installing-an-enterprise-license[Install Mule EE license]
+
+.Apply local changes to Mule configuration files
+[listing]
+--
+tar xzf mule-ee-distribution-standalone-3.9.0.tar.gz
+
+export MULE_HOME=~/src/docker/mule/MuleEE-3.9.0/mule-enterprise-standalone-3.9.0
+
+cd $MULE_HOME
+
+# apply mule license
+bin/mule -installLicense _path_to_your_license.lic
+
+# re-create tar
+tar czf mule-ee-distribution-standalone-3.9.0.tar.gz mule-enterprise-standalone-3.9.0
+--
+
+{sp}+
+The Docker volumes expect to preserve stateful information under /opt, so the folder
+structure and permissions will need to be set up. My permissions are wide open, you
+may prefer to create an EC2 Mule user and group to apply stricter access control. If
+you do i'm confident you'll do so successfully on your own.
+
+.Folder structure for docker volumes
+[listing]
+--
+sudo mkdir /opt/mmc
+sudo mkdir /opt/mmc/logs
+sudo mkdir /opt/mmc/mmc-data
+sudo chmod -R 777 /opt/mmc
+sudo mkdir /opt/mule-enterprise-standalone-3.9.0
+sudo mkdir /opt/mule-enterprise-standalone-3.9.0/apps
+sudo mkdir /opt/mule-enterprise-standalone-3.9.0/conf
+sudo mkdir /opt/mule-enterprise-standalone-3.9.0/domains
+sudo mkdir /opt/mule-enterprise-standalone-3.9.0/logs
+sudo chmod -R 777 /opt/mule-enterprise-standalone-3.9.0
+sudo ln -s /opt/mule-enterprise-standalone-3.9.0 /opt/mule
+
+ls -l /opt
+
+  drwxrwxrwx. 4 root root     34 Feb  2 15:43 mmc
+  drwxrwxrwx. 6 mule mule     57 May 24 15:05 mule-enterprise-standalone-3.9.0
+--
+
+{sp}+
+My open AWS Mule ports look like this:
+
+.Open ports in AWS Mule SG
+|===
+|Type|Protocol |Port Range|Source|Description
+
+|Custom TCP Rule
+|TCP
+|8585
+|0.0.0.0/0
+|Mule MMC Agent
+
+|Custom TCP Rule
+|TCP
+|8082
+|0.0.0.0/0
+|Mule API for HTTP
+
+|===
+
+{sp} +
+
+== Dockerizing the Mule Management Console (MMC)
+
+
+.Dockerfile for MMC
+[listing]
+--
+FROM java:openjdk-8-jdk
+
+MAINTAINER Your Name <me@myaddress.com>
+
+USER root
+
+WORKDIR /opt
+RUN useradd --user-group --shell /bin/false mule && chown mule /opt
+
+COPY    ./mmc-3.8.x-web.tar.gz /opt
+COPY    ./start.sh /opt
+
+# Using the most recent MMC 3.8.x version
+RUN		tar xzf mmc-3.8.x-web.tar.gz \
+		  && ln -s mmc-3.8.x-web mmc \
+		  && chmod 755 mmc-3.8.x-web \
+		  && chmod 755 start.sh \
+		  && rm mmc-3.8.x-web.tar.gz
+
+# Mule environment vars
+ENV MMC_HOME /opt/mmc
+
+# Volume mount points
+VOLUME ["/opt/mmc/apache-tomcat-7.0.52/logs", "/opt/mmc/apache-tomcat-7.0.52/conf", "/opt/mmc/apache-tomcat-7.0.52/bin", "/opt/mmc/apache-tomcat-7.0.52/mmc-data"]
+
+# Mule work directory
+# WORKDIR /opt
+
+USER mule
+
+# start tomcat && tail -f /var/lib/tomcat7/logs/catalina.out
+CMD [ "./start.sh" ]
+
+# Expose default MMC port
+EXPOSE 8585
+--
+
+{sp} +
+
+When the MMC Docker container starts, it will run the Tomcat server and tail the
+log contents to stdout.
+
+{sp} +
+
+Create the _start.sh_ script below in you MMC folder, it will be added to the
+Docker image and will keep the container running after it's started in the step below.
+
+.start.sh file in MMC folder
+[listing]
+--
+#!/bin/sh
+
+# If the apache-tomcat location is different for you, be sre to change
+cd /opt/mmc/apache-tomcat-7.0.52
+
+bin/startup.sh && tail -f logs/catalina.out
+--
+
+{sp} +
+The initial build may take a while to complete as it needs to
+pull down the image layers from the Docker hub and create an
+image.
+
+.Build your MMC Docker container
+[listing]
+--
+# Change maxmule at end of next line to your Docker image name and optionally tag
+docker build -t maxmule/mmc .
+--
+
+{sp} +
+When the build successfully completes we can start the MMC container instance
+and use the browser to connect to it.
+
+.Run your MMC Docker container
+[listing]
+--
+# Change maxmule at end of next line to your Docker image name
+docker run -itd --name mmc -p 8585:8585 -v /opt/mmc/mmc-data:/opt/mmc/apache-tomcat-7.0.52/mmc-data -v /opt/mmc/logs:/opt/mmc/apache-tomcat-7.0.52/logs maxmule/mmc
+
+--
+{sp} +
+
+It may take a while for the MMC to start up, you can use the Docker
+_logs_ command to see when startup has completed. The *Ctrl-C* command
+will terminate the earlier logs command.
+
+.Ensure MMC is running
+[listing]
+--
+docker ps
+
+docker logs -f mmc
+^C
+--
+
+
+== Dockerizing the Mule Runtime
+
+.Dockerfile for Mule
+[listing]
+--
+FROM java:openjdk-8-jdk
+
+# 3.9.0 ee branch
+
+MAINTAINER Your Name <me@myaddress.com>
+
+USER root
+
+WORKDIR /opt
+RUN useradd --user-group --shell /bin/false mule && chown mule /opt
+
+COPY    ./mule-ee-distribution-standalone-3.9.0.tar.gz /opt
+COPY    ./start.sh /opt
+
+RUN 	tar xzf mule-ee-distribution-standalone-3.9.0.tar.gz \
+		  && ln -s mule-enterprise-standalone-3.9.0 mule \
+		  && chmod 755 mule-enterprise-standalone-3.9.0 \
+		  && chown -R mule:mule mule-enterprise-standalone-3.9.0 start.sh \
+		  && chmod 755 start.sh \
+		  && rm mule-ee-distribution-standalone-3.9.0.tar.gz
+
+
+# Mule environment vars
+ENV MULE_HOME /opt/mule
+ENV PATH $MULE_HOME/bin:$PATH
+
+# Volume mount points for persisten storage, create others for domains and conf if necessary
+VOLUME ["/opt/mule/logs", "/opt/mule/apps"]
+
+USER mule
+
+ENTRYPOINT ["mule"]
+CMD ["console"]
+
+# Expose port 7777 if you plan to use MMC
+EXPOSE 7777
+
+# Expose additional ports as needed for your API use
+#EXPOSE 8081
+EXPOSE 8082
+#EXPOSE 8083
+
+--
+
+{sp}+
+Similar to how we built and started the MMC above we'll follow the same steps with our Mule container.
+
+Mule will be using port 8082 for working with our API deployment and port 7777 for
+communicating with the MMC.
+
+.Build your Mule Docker container
+[listing]
+--
+# Change maxmule at end of next line to your Docker image name and optionally tag
+docker build -t maxmule/mule39ee .
+--
+
+{sp}+
+The build step is the same as we did erlier for the MMC
+
+.Build your Mule Docker container
+[listing]
+--
+# Change maxmule at end of next line to your Docker image name
+docker run -itd --name mule -p 8082:8082 -v /opt/mule/apps:/opt/mule/apps -v /opt/mule/logs:/opt/mule/logs maxmule/mule39ee
+--
+
+{sp} +
+When build has successfully completed we run our Mule runtime instance and verify it has properly started.
+
+.Ensure Mule is running
+[listing]
+--
+docker ps
+
+docker logs -f mule
+^C
+--
+
+== Deploying a model
+
+Create a simple HTTP flow in AnypointStudio which listens on Port 8082, a port which you expose in your Docker file and
+the EC2 instance security group. Run the flow in AnypointStudio first to ensure it will work when deployed to your Docker container.
+
+
+{sp} +
+
+This concludes our brief examples with Dockerizing the Mule.
+
+{sp} +
+
+I hope you enjoyed reading this article as much as I have enjoyed writing it, i'm looking forward to your feedback!
+
+{sp} +
+{sp} +
+
+About the Author:
+
+https://www.linkedin.com/in/mitch-dresdner-785a46126/[Mitch Dresdner] is a Senior Mule Consultant at TerraThink
