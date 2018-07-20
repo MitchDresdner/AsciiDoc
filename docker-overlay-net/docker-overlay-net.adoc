@@ -1,0 +1,468 @@
+= Docker Overlay Network
+Mitch Dresdner <MDresdner@Terathink.com>
+:toc:                                             // Enable table of contents [left, right]
+:toc-placement: preamble
+:appversion: 1.0.0
+// A link as attribute
+:fedpkg: https://apps.fedoraproject.org/packages/asciidoc
+// Example of other attributes
+:imagesdir: ./img
+:icons: font
+// Default icon dir is images/icons, can override using :iconsdir: ./icons
+:stylesdir: ./styles
+:scriptsdir: ./js
+// keywords added to html
+:keywords: docker, mule, mmc, deploy, microservice, monitoring
+
+// enable btn:
+:experimental:
+
+[abstract]
+Creating an overlay network for standalone containers
+
+{sp} +
+
+[.preamble]
+// Preamble goes here
+
+
+image::under-construction.jpg[Containers in action,700]
+
+== Summary
+
+When we get started using Docker, the typical configuration is to create a standalone application on our desktop.
+
+For the most part, it's usually not practical to run all your applications on a single machine and when it's not you'll need
+an approach for distributing the applications across many machines. This is where a Docker Swarm comes in.
+
+Docker Swarm provides capabilities for clustering, scalability, discovery and security to name a few. In this
+article, we'll create a basic Swarm configuration and perform some experiments to illustrate discovery and connectivity.
+
+The demo Swarm cluster will consist of a Swarm manager and two workers, for convenience it will be running in AWS.
+
+{sp} +
+
+[NOTE]
+====
+_If you feel you're in need of a refresher on Docker Swarm or configuring your AWS account see https://dzone.com/articles/fun-with-docker-swarm[Dzone article: Fun with Docker Swarm] here._
+====
+
+
+{sp} +
+
+== Architecture
+
+Our target Architecture will consist of deploying Mule applications from AnypointStudio into Docker containers running inside an AWS AMI image.
+
+{sp} +
+
+image::under-construction.jpg[Mule in AWS,540]
+
+{sp} +
+
+In the steps below you'll configure an AWS EC2 instance and configure the environment for Docker. With Docker installed you'll
+create images for Mule and MMC, run the containers, associate the Mule runtime with the MMC and deploy a simple _Hello Mule_ application.
+
+Docker containers are ephemeral by nature, which means that any changes to container state will be lost when a container is
+stopped. This isn't desirable and a quick remedy will be to use Docker volumes to persist and changes we need between container
+starts. The information which will be stateful is specified by the *VOLUME* tag in the Docker files below.
+
+{sp} +
+
+== Prerequisites
+
+We assume you're somewhat familiar with Docker and have some familiarity setting up EC2 instances in AWS.
+
+If you're not confident with AWS or would like a little refresher please review the following articles:
+
+{sp} +
+
+.Some refreshers before getting started
+* https://dzone.com/articles/provision-a-free-aws-ec2-instance-in-5-minutes[Provision a free tier EC2 instance]
+* https://docs.docker.com/install/#cloud[Configure Docker on your EC2 instance]
+
+{sp} +
+
+=== Caveats
+[CAUTION]
+--
+Some AWS services will incur charges, be sure to stop and/or terminate any services you aren't using. Additionaly,
+consider setting up https://aws.amazon.com/about-aws/whats-new/2012/05/10/announcing-aws-billing-alerts/[billing alerts]
+to warn you of charges exceeding a threshold that may caus you concern.
+
+--
+
+== Configuration
+
+Begin by creating (3) EC2 instances, free tier should be fine, and install Docker on each EC2 instance.
+Refer to the https://docs.docker.com/install/#supported-platforms[Docker Supported platforms] section for
+guidance and instructions for your instance.
+
+
+In my EC2-User home folder I use the following hierarchy for my Dockerfile source:
+
+.Folder structure for builds
+[listing]
+--
+# Networking basics
+https://www.networkcomputing.com/cloud-infrastructure/docker-networking-basics-quick-guide/725795721
+
+https://docs.docker.com/network/overlay/#attach-a-standalone-container-to-an-overlay-network
+https://docs.docker.com/network/network-tutorial-overlay/#walk-through
+
+# Master node
+docker swarm init --advertise-addr=10.193.142.248
+
+  # Join both nodes to the swarm
+  - Swarm initialized: current node (6owjx2qlqlbtzsuqg3vvczi70) is now a manager.
+  - docker swarm join --token SWMTKN-1-5vgqjdjq1v6whiqcd9gm9wu2z033vhkly94j6qdfmyt9kb50nj-9z65ax1fqnpoo8u968j8otu0y 10.193.142.248:2377
+
+# to leave the swarm
+docker swarm leave
+
+# On Master, list all nodes
+docker node ls
+
+# Create 2 alpine instances, initially detached
+docker run -dit --name alpine1 alpine ash
+docker run -dit --name alpine2 alpine ash
+
+docker container ls
+
+docker container ls
+docker network inspect bridge
+
+docker attach alpine1
+ip addr show
+ping -c2 172.17.0.5			# alpine2
+
+^P^Q
+
+# remove containers
+docker container stop alpine1 alpine2
+docker container rm alpine1 alpine2
+
+
+#### Overlay network for standalone containers
+
+docker network ls
+
+# Host1
+docker network create --driver=overlay --attachable test-net		# sptdx1c82ab4xhzxbu94yyduf
+
+docker network ls
+
+docker run -it --name alpine1 --network test-net alpine
+
+docker network ls
+
+# Host2
+docker run -dit --name alpine2 --network test-net alpine
+
+### Host mode
+docker run -it --name alpine1 --net=host alpine
+
+
+###
+docker service update --publish-add 8083 alpine2
+
+docker run -itd --name alpine2 -p 8083:8083 --network test-net alpine
+
+nc -l -p 8083
+nc 10.0.0.18 8083
+
+--
+
+{sp}+
+Note that the tar file has been expanded and we have a folder for *mule-enterprise-standalone-3.9.0*.
+
+The reason for this is that I install our custom EE license, make any changes to configuration files
+unique to our environments and repackage the tar file for creation of the Mule Docker image.
+
+https://docs.mulesoft.com/mule-user-guide/v/3.9/installing-an-enterprise-license[Install Mule EE license]
+
+.Apply local changes to Mule configuration files
+[listing]
+--
+tar xzf mule-ee-distribution-standalone-3.9.0.tar.gz
+
+export MULE_HOME=~/src/docker/mule/MuleEE-3.9.0/mule-enterprise-standalone-3.9.0
+
+cd $MULE_HOME
+
+# apply mule license
+bin/mule -installLicense _path_to_your_license.lic
+
+# re-create tar
+tar czf mule-ee-distribution-standalone-3.9.0.tar.gz mule-enterprise-standalone-3.9.0
+--
+
+{sp}+
+The Docker volumes expect to preserve stateful information under /opt, so the folder
+structure and permissions will need to be set up. My permissions are wide open, you
+may prefer to create an EC2 Mule user and group to apply stricter access control. If
+you do i'm confident you'll do so successfully on your own.
+
+.Folder structure for docker volumes
+[listing]
+--
+sudo mkdir /opt/mmc
+sudo mkdir /opt/mmc/logs
+sudo mkdir /opt/mmc/mmc-data
+sudo chmod -R 777 /opt/mmc
+sudo mkdir /opt/mule-enterprise-standalone-3.9.0
+sudo mkdir /opt/mule-enterprise-standalone-3.9.0/apps
+sudo mkdir /opt/mule-enterprise-standalone-3.9.0/conf
+sudo mkdir /opt/mule-enterprise-standalone-3.9.0/domains
+sudo mkdir /opt/mule-enterprise-standalone-3.9.0/logs
+sudo chmod -R 777 /opt/mule-enterprise-standalone-3.9.0
+sudo ln -s /opt/mule-enterprise-standalone-3.9.0 /opt/mule
+
+ls -l /opt
+
+  drwxrwxrwx. 4 root root     34 Feb  2 15:43 mmc
+  drwxrwxrwx. 6 mule mule     57 May 24 15:05 mule-enterprise-standalone-3.9.0
+--
+
+{sp}+
+My open AWS Mule ports look like this:
+
+.Open ports in AWS Mule SG
+|===
+|Type|Protocol |Port Range|Source|Description
+
+|Custom TCP Rule
+|TCP
+|2377
+|10.193.142.0/24
+|Docker swarm management
+
+|Custom TCP Rule
+|TCP
+|7946
+|10.193.142.0/24
+|Container network discovery
+
+|Custom UDP Rule
+|TCP
+|4789
+|10.193.142.0/24
+|Container ingress network
+
+|Custom TCP Rule
+|TCP
+|8083
+|10.193.142.0/24
+|Demo port for machine to machine communications
+
+|===
+
+{sp} +
+
+== Dockerizing the Mule Management Console (MMC)
+
+
+.Dockerfile for MMC
+[listing]
+--
+FROM java:openjdk-8-jdk
+
+MAINTAINER Your Name <me@myaddress.com>
+
+USER root
+
+WORKDIR /opt
+RUN useradd --user-group --shell /bin/false mule && chown mule /opt
+
+COPY    ./mmc-3.8.x-web.tar.gz /opt
+COPY    ./start.sh /opt
+
+# Using the most recent MMC 3.8.x version
+RUN		tar xzf mmc-3.8.x-web.tar.gz \
+		  && ln -s mmc-3.8.x-web mmc \
+		  && chmod 755 mmc-3.8.x-web \
+		  && chmod 755 start.sh \
+		  && rm mmc-3.8.x-web.tar.gz
+
+# Mule environment vars
+ENV MMC_HOME /opt/mmc
+
+# Volume mount points
+VOLUME ["/opt/mmc/apache-tomcat-7.0.52/logs", "/opt/mmc/apache-tomcat-7.0.52/conf", "/opt/mmc/apache-tomcat-7.0.52/bin", "/opt/mmc/apache-tomcat-7.0.52/mmc-data"]
+
+# Mule work directory
+# WORKDIR /opt
+
+USER mule
+
+# start tomcat && tail -f /var/lib/tomcat7/logs/catalina.out
+CMD [ "./start.sh" ]
+
+# Expose default MMC port
+EXPOSE 8585
+--
+
+{sp} +
+
+When the MMC Docker container starts, it will run the Tomcat server and tail the
+log contents to stdout.
+
+{sp} +
+
+Create the _start.sh_ script below in you MMC folder, it will be added to the
+Docker image and will keep the container running after it's started in the step below.
+
+.start.sh file in MMC folder
+[listing]
+--
+#!/bin/sh
+
+# If the apache-tomcat location is different for you, be sre to change
+cd /opt/mmc/apache-tomcat-7.0.52
+
+bin/startup.sh && tail -f logs/catalina.out
+--
+
+{sp} +
+The initial build may take a while to complete as it needs to
+pull down the image layers from the Docker hub and create an
+image.
+
+.Build your MMC Docker container
+[listing]
+--
+# Change maxmule at end of next line to your Docker image name and optionally tag
+docker build -t maxmule/mmc .
+--
+
+{sp} +
+When the build successfully completes we can start the MMC container instance
+and use the browser to connect to it.
+
+.Run your MMC Docker container
+[listing]
+--
+# Change maxmule at end of next line to your Docker image name
+docker run -itd --name mmc -p 8585:8585 -v /opt/mmc/mmc-data:/opt/mmc/apache-tomcat-7.0.52/mmc-data -v /opt/mmc/logs:/opt/mmc/apache-tomcat-7.0.52/logs maxmule/mmc
+
+--
+{sp} +
+
+It may take a while for the MMC to start up, you can use the Docker
+_logs_ command to see when startup has completed. The *Ctrl-C* command
+will terminate the earlier logs command.
+
+.Ensure MMC is running
+[listing]
+--
+docker ps
+
+docker logs -f mmc
+^C
+--
+
+
+== Dockerizing the Mule Runtime
+
+.Dockerfile for Mule
+[listing]
+--
+FROM java:openjdk-8-jdk
+
+# 3.9.0 ee branch
+
+MAINTAINER Your Name <me@myaddress.com>
+
+USER root
+
+WORKDIR /opt
+RUN useradd --user-group --shell /bin/false mule && chown mule /opt
+
+COPY    ./mule-ee-distribution-standalone-3.9.0.tar.gz /opt
+COPY    ./start.sh /opt
+
+RUN 	tar xzf mule-ee-distribution-standalone-3.9.0.tar.gz \
+		  && ln -s mule-enterprise-standalone-3.9.0 mule \
+		  && chmod 755 mule-enterprise-standalone-3.9.0 \
+		  && chown -R mule:mule mule-enterprise-standalone-3.9.0 start.sh \
+		  && chmod 755 start.sh \
+		  && rm mule-ee-distribution-standalone-3.9.0.tar.gz
+
+
+# Mule environment vars
+ENV MULE_HOME /opt/mule
+ENV PATH $MULE_HOME/bin:$PATH
+
+# Volume mount points for persisten storage, create others for domains and conf if necessary
+VOLUME ["/opt/mule/logs", "/opt/mule/apps"]
+
+USER mule
+
+ENTRYPOINT ["mule"]
+CMD ["console"]
+
+# Expose port 7777 if you plan to use MMC
+EXPOSE 7777
+
+# Expose additional ports as needed for your API use
+#EXPOSE 8081
+EXPOSE 8082
+#EXPOSE 8083
+
+--
+
+{sp}+
+Similar to how we built and started the MMC above we'll follow the same steps with our Mule container.
+
+Mule will be using port 8082 for working with our API deployment and port 7777 for
+communicating with the MMC.
+
+.Build your Mule Docker container
+[listing]
+--
+# Change maxmule at end of next line to your Docker image name and optionally tag
+docker build -t maxmule/mule39ee .
+--
+
+{sp}+
+The build step is the same as we did erlier for the MMC
+
+.Build your Mule Docker container
+[listing]
+--
+# Change maxmule at end of next line to your Docker image name
+docker run -itd --name mule -p 8082:8082 -v /opt/mule/apps:/opt/mule/apps -v /opt/mule/logs:/opt/mule/logs maxmule/mule39ee
+--
+
+{sp} +
+When build has successfully completed we run our Mule runtime instance and verify it has properly started.
+
+.Ensure Mule is running
+[listing]
+--
+docker ps
+
+docker logs -f mule
+^C
+--
+
+== Deploying a model
+
+Create a simple HTTP flow in AnypointStudio which listens on Port 8082, a port which you expose in your Docker file and
+the EC2 instance security group. Run the flow in AnypointStudio first to ensure it will work when deployed to your Docker container.
+
+
+{sp} +
+
+This concludes our brief examples with Dockerizing the Mule.
+
+{sp} +
+
+I hope you enjoyed reading this article as much as I have enjoyed writing it, i'm looking forward to your feedback!
+
+{sp} +
+{sp} +
+
+About the Author:
+
+https://www.linkedin.com/in/mitch-dresdner-785a46126/[Mitch Dresdner] is a Senior Mule Consultant at TerraThink
