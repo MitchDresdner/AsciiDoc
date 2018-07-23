@@ -38,7 +38,7 @@ an approach for distributing the applications across many machines. This is wher
 Docker Swarm provides capabilities for clustering, scalability, discovery and security to name a few. In this
 article, we'll create a basic Swarm configuration and perform some experiments to illustrate discovery and connectivity.
 
-The demo Swarm cluster will consist of a Swarm manager and two workers, for convenience it will be running in AWS.
+The demo Swarm cluster will consist of a Swarm manager and a worker, for convenience it will be running in AWS.
 
 {sp} +
 
@@ -94,138 +94,12 @@ to warn you of charges exceeding a threshold that may caus you concern.
 
 == Configuration
 
-Begin by creating (3) EC2 instances, free tier should be fine, and install Docker on each EC2 instance.
+Begin by creating (2) EC2 instances, free tier should be fine, and install Docker on each EC2 instance.
 Refer to the https://docs.docker.com/install/#supported-platforms[Docker Supported platforms] section for
-guidance and instructions for your instance.
-
-
-In my EC2-User home folder I use the following hierarchy for my Dockerfile source:
-
-.Folder structure for builds
-[listing]
---
-# Networking basics
-https://www.networkcomputing.com/cloud-infrastructure/docker-networking-basics-quick-guide/725795721
-
-https://docs.docker.com/network/overlay/#attach-a-standalone-container-to-an-overlay-network
-https://docs.docker.com/network/network-tutorial-overlay/#walk-through
-
-# Master node
-docker swarm init --advertise-addr=10.193.142.248
-
-  # Join both nodes to the swarm
-  - Swarm initialized: current node (6owjx2qlqlbtzsuqg3vvczi70) is now a manager.
-  - docker swarm join --token SWMTKN-1-5vgqjdjq1v6whiqcd9gm9wu2z033vhkly94j6qdfmyt9kb50nj-9z65ax1fqnpoo8u968j8otu0y 10.193.142.248:2377
-
-# to leave the swarm
-docker swarm leave
-
-# On Master, list all nodes
-docker node ls
-
-# Create 2 alpine instances, initially detached
-docker run -dit --name alpine1 alpine ash
-docker run -dit --name alpine2 alpine ash
-
-docker container ls
-
-docker container ls
-docker network inspect bridge
-
-docker attach alpine1
-ip addr show
-ping -c2 172.17.0.5			# alpine2
-
-^P^Q
-
-# remove containers
-docker container stop alpine1 alpine2
-docker container rm alpine1 alpine2
-
-
-#### Overlay network for standalone containers
-
-docker network ls
-
-# Host1
-docker network create --driver=overlay --attachable test-net		# sptdx1c82ab4xhzxbu94yyduf
-
-docker network ls
-
-docker run -it --name alpine1 --network test-net alpine
-
-docker network ls
-
-# Host2
-docker run -dit --name alpine2 --network test-net alpine
-
-### Host mode
-docker run -it --name alpine1 --net=host alpine
-
-
-###
-docker service update --publish-add 8083 alpine2
-
-docker run -itd --name alpine2 -p 8083:8083 --network test-net alpine
-
-nc -l -p 8083
-nc 10.0.0.18 8083
-
---
+Docker installation guidance and instructions for your instance.
 
 {sp}+
-Note that the tar file has been expanded and we have a folder for *mule-enterprise-standalone-3.9.0*.
-
-The reason for this is that I install our custom EE license, make any changes to configuration files
-unique to our environments and repackage the tar file for creation of the Mule Docker image.
-
-https://docs.mulesoft.com/mule-user-guide/v/3.9/installing-an-enterprise-license[Install Mule EE license]
-
-.Apply local changes to Mule configuration files
-[listing]
---
-tar xzf mule-ee-distribution-standalone-3.9.0.tar.gz
-
-export MULE_HOME=~/src/docker/mule/MuleEE-3.9.0/mule-enterprise-standalone-3.9.0
-
-cd $MULE_HOME
-
-# apply mule license
-bin/mule -installLicense _path_to_your_license.lic
-
-# re-create tar
-tar czf mule-ee-distribution-standalone-3.9.0.tar.gz mule-enterprise-standalone-3.9.0
---
-
-{sp}+
-The Docker volumes expect to preserve stateful information under /opt, so the folder
-structure and permissions will need to be set up. My permissions are wide open, you
-may prefer to create an EC2 Mule user and group to apply stricter access control. If
-you do i'm confident you'll do so successfully on your own.
-
-.Folder structure for docker volumes
-[listing]
---
-sudo mkdir /opt/mmc
-sudo mkdir /opt/mmc/logs
-sudo mkdir /opt/mmc/mmc-data
-sudo chmod -R 777 /opt/mmc
-sudo mkdir /opt/mule-enterprise-standalone-3.9.0
-sudo mkdir /opt/mule-enterprise-standalone-3.9.0/apps
-sudo mkdir /opt/mule-enterprise-standalone-3.9.0/conf
-sudo mkdir /opt/mule-enterprise-standalone-3.9.0/domains
-sudo mkdir /opt/mule-enterprise-standalone-3.9.0/logs
-sudo chmod -R 777 /opt/mule-enterprise-standalone-3.9.0
-sudo ln -s /opt/mule-enterprise-standalone-3.9.0 /opt/mule
-
-ls -l /opt
-
-  drwxrwxrwx. 4 root root     34 Feb  2 15:43 mmc
-  drwxrwxrwx. 6 mule mule     57 May 24 15:05 mule-enterprise-standalone-3.9.0
---
-
-{sp}+
-My open AWS Mule ports look like this:
+AWS ports to open to support Docker swarm and our port connection test:
 
 .Open ports in AWS Mule SG
 |===
@@ -259,202 +133,228 @@ My open AWS Mule ports look like this:
 
 {sp} +
 
-== Dockerizing the Mule Management Console (MMC)
+For our examples we'll use the following ip addresses to represent Node 1 and Node2.
 
+* Node 1: _10.193.142.248_
+* Node 2: _10.193.142.246_
 
-.Dockerfile for MMC
+{sp} +
+
+Before getting started lets take a look at the existing Docker networks.
+
+{sp} +
+
+.List Docker networks
 [listing]
 --
-FROM java:openjdk-8-jdk
-
-MAINTAINER Your Name <me@myaddress.com>
-
-USER root
-
-WORKDIR /opt
-RUN useradd --user-group --shell /bin/false mule && chown mule /opt
-
-COPY    ./mmc-3.8.x-web.tar.gz /opt
-COPY    ./start.sh /opt
-
-# Using the most recent MMC 3.8.x version
-RUN		tar xzf mmc-3.8.x-web.tar.gz \
-		  && ln -s mmc-3.8.x-web mmc \
-		  && chmod 755 mmc-3.8.x-web \
-		  && chmod 755 start.sh \
-		  && rm mmc-3.8.x-web.tar.gz
-
-# Mule environment vars
-ENV MMC_HOME /opt/mmc
-
-# Volume mount points
-VOLUME ["/opt/mmc/apache-tomcat-7.0.52/logs", "/opt/mmc/apache-tomcat-7.0.52/conf", "/opt/mmc/apache-tomcat-7.0.52/bin", "/opt/mmc/apache-tomcat-7.0.52/mmc-data"]
-
-# Mule work directory
-# WORKDIR /opt
-
-USER mule
-
-# start tomcat && tail -f /var/lib/tomcat7/logs/catalina.out
-CMD [ "./start.sh" ]
-
-# Expose default MMC port
-EXPOSE 8585
+docker network ls
 --
 
 {sp} +
 
-When the MMC Docker container starts, it will run the Tomcat server and tail the
-log contents to stdout.
+The output of the network list should look at least like the listing below if you’ve never added a network or
+initialized a swarm on this Docker daemon. Other networks may be shown as well.
 
 {sp} +
-
-Create the _start.sh_ script below in you MMC folder, it will be added to the
-Docker image and will keep the container running after it's started in the step below.
-
-.start.sh file in MMC folder
-[listing]
---
-#!/bin/sh
-
-# If the apache-tomcat location is different for you, be sre to change
-cd /opt/mmc/apache-tomcat-7.0.52
-
-bin/startup.sh && tail -f logs/catalina.out
---
+.Results of Docker network listing
+[literal]
+NETWORK ID          NAME                DRIVER              SCOPE
+fa977e47b9f3        bridge              bridge              local
+705fc078c278        host                host                local
+bd4caf6c1751        none                null                local
 
 {sp} +
-The initial build may take a while to complete as it needs to
-pull down the image layers from the Docker hub and create an
-image.
+From Node 1 lets begin by initializing the swarm.
 
-.Build your MMC Docker container
+
+.Create the swarm master node
 [listing]
 --
-# Change maxmule at end of next line to your Docker image name and optionally tag
-docker build -t maxmule/mmc .
+docker swarm init --advertise-addr=10.193.142.248
 --
 
 {sp} +
-When the build successfully completes we can start the MMC container instance
-and use the browser to connect to it.
-
-.Run your MMC Docker container
-[listing]
---
-# Change maxmule at end of next line to your Docker image name
-docker run -itd --name mmc -p 8585:8585 -v /opt/mmc/mmc-data:/opt/mmc/apache-tomcat-7.0.52/mmc-data -v /opt/mmc/logs:/opt/mmc/apache-tomcat-7.0.52/logs maxmule/mmc
-
---
+You should get a response that looks like the one below, we'll use the token provided to join our other node to the swarm.
 {sp} +
 
-It may take a while for the MMC to start up, you can use the Docker
-_logs_ command to see when startup has completed. The *Ctrl-C* command
-will terminate the earlier logs command.
+....
+Swarm initialized: current node (v9c2un5lqf7iapnv96uobag00) is now a manager.
 
-.Ensure MMC is running
+To add a worker to this swarm, run the following command:
+
+    docker swarm join --token SWMTKN-1-5bbh9ksinfmajdqnsuef7y5ypbwj5d9jazt47urenz3ksuw9lk-227dtheygwbxt8dau8ul791a7 10.193.142.248:2377
+
+To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+
+....
+
+{sp} +
+
+On Node 1 join the swarm as the manager
+
+.Node 1 becomes manager
 [listing]
 --
-docker ps
+docker swarm join-token manager
+--
 
-docker logs -f mmc
+{sp} +
+Next, lets join the swarm from Node 2.
+
+{sp} +
+
+.Node 2 joins swarm
+[listing]
+--
+docker swarm join --token SWMTKN-1-5bbh9ksinfmajdqnsuef7y5ypbwj5d9jazt47urenz3ksuw9lk-227dtheygwbxt8dau8ul791a7 10.193.142.248:2377
+This node joined a swarm as a worker.
+--
+
+{sp} +
+
+From Node 1 the swarm master we can now look at the connected nodes
+
+.On Master, list all nodes
+[listing]
+--
+docker node ls
+--
+
+.Results of listing nodes
+....
+ID                            HOSTNAME            STATUS    AVAILABILITY   ENGINE VERSION
+2quenyegseco1w0e5n1qe58r3     ip-10-193-142-235   Ready     Active         18.03.1-ce
+wrjk02g909c6fnuxlepmksuz4     ip-10-193-142-246   Ready     Active         18.03.1-ce
+
+....
+
+{sp} +
+
+Also, notice that an Ingress network has been created, this provides an entry point for our swarm network.
+
+.Results of Docker network listing
+[literal]
+NETWORK ID          NAME                DRIVER              SCOPE
+fa977e47b9f3        bridge              bridge              local
+705fc078c278        host                host                local
+bd4caf6c1751        none                null                local
+qrppfipdu098        ingress             overlay             swarm
+
+{sp} +
+
+
+{sp} +
+Lets go ahead and create our Overlay network for standalone containers
+
+Create overlay network from Node 1
+
+.Overlay network creation on Node 1
+[listing]
+--
+docker network create --driver=overlay --attachable my-overlay-net
+
+docker network ls
+--
+
+{sp} +
+*Results of Docker network listing*
+[literal]
+NETWORK ID          NAME                DRIVER              SCOPE
+fa977e47b9f3        bridge              bridge              local
+705fc078c278        host                host                local
+bd4caf6c1751        none                null                local
+qrppfipdu098        ingress             overlay             swarm
+vn12jyorp1ey        my-overlay-net      overlay             swarm
+
+{sp} +
+
+Note the addition of our new overlay network to the swarm
+
+{sp} +
+
+Join the overlay network from Node 1
+
+.Run our container, join the overlay net
+[listing]
+--
+docker run -it --name alpine1 --network my-overlay-net alpine
+--
+
+{sp} +
+
+Join the overlay network from Node 2, we'll open port _8083_ to test connectivity into our running container.
+
+.Run our container, join the overlay net
+[listing]
+--
+docker run -it --name alpine2 -p 8083:8083 --network my-overlay-net alpine
+--
+
+{sp} +
+
+== Verify our overlay network connectivity
+
+With our containers running we can test that we can discover our hosts using DNS configured by the swarm.
+
+From Node 2 lets ping the Nod 1 container.
+
+.Node 2 pings Node 1, listens on port 8083
+[listing]
+--
+ip addr   # show our ip address
+ping -c 2 alpine1
+
+# create listener on 8083
+nc -l -p 8083
+
+--
+
+{sp} +
+
+From Node 1 lets ping the Node 2 container and connect to it's open listener on port _8083_.
+
+.Node 1 pings Node 2, connect to Node 2 listener on port 8083
+[listing]
+--
+ip addr   # show our ip address
+ping -c 2 alpine2
+
+# connect to alpine2 listener on 8083
+nc alpine2 8083
+Hello Alpine2
 ^C
 --
 
+== Cleanup
+With our testing complete we can tear down the swarm configuration.
 
-== Dockerizing the Mule Runtime
-
-.Dockerfile for Mule
+.Remove Node 2 swarm
 [listing]
 --
-FROM java:openjdk-8-jdk
+docker container stop alpine2
+docker container rm alpine2
 
-# 3.9.0 ee branch
-
-MAINTAINER Your Name <me@myaddress.com>
-
-USER root
-
-WORKDIR /opt
-RUN useradd --user-group --shell /bin/false mule && chown mule /opt
-
-COPY    ./mule-ee-distribution-standalone-3.9.0.tar.gz /opt
-COPY    ./start.sh /opt
-
-RUN 	tar xzf mule-ee-distribution-standalone-3.9.0.tar.gz \
-		  && ln -s mule-enterprise-standalone-3.9.0 mule \
-		  && chmod 755 mule-enterprise-standalone-3.9.0 \
-		  && chown -R mule:mule mule-enterprise-standalone-3.9.0 start.sh \
-		  && chmod 755 start.sh \
-		  && rm mule-ee-distribution-standalone-3.9.0.tar.gz
-
-
-# Mule environment vars
-ENV MULE_HOME /opt/mule
-ENV PATH $MULE_HOME/bin:$PATH
-
-# Volume mount points for persisten storage, create others for domains and conf if necessary
-VOLUME ["/opt/mule/logs", "/opt/mule/apps"]
-
-USER mule
-
-ENTRYPOINT ["mule"]
-CMD ["console"]
-
-# Expose port 7777 if you plan to use MMC
-EXPOSE 7777
-
-# Expose additional ports as needed for your API use
-#EXPOSE 8081
-EXPOSE 8082
-#EXPOSE 8083
-
---
-
-{sp}+
-Similar to how we built and started the MMC above we'll follow the same steps with our Mule container.
-
-Mule will be using port 8082 for working with our API deployment and port 7777 for
-communicating with the MMC.
-
-.Build your Mule Docker container
-[listing]
---
-# Change maxmule at end of next line to your Docker image name and optionally tag
-docker build -t maxmule/mule39ee .
---
-
-{sp}+
-The build step is the same as we did erlier for the MMC
-
-.Build your Mule Docker container
-[listing]
---
-# Change maxmule at end of next line to your Docker image name
-docker run -itd --name mule -p 8082:8082 -v /opt/mule/apps:/opt/mule/apps -v /opt/mule/logs:/opt/mule/logs maxmule/mule39ee
+docker swarm leave
 --
 
 {sp} +
-When build has successfully completed we run our Mule runtime instance and verify it has properly started.
 
-.Ensure Mule is running
+.Remove Node 1 swarm
 [listing]
 --
-docker ps
+docker container stop alpine1
+docker container rm alpine1
 
-docker logs -f mule
-^C
+docker swarm leave --force
 --
-
-== Deploying a model
-
-Create a simple HTTP flow in AnypointStudio which listens on Port 8082, a port which you expose in your Docker file and
-the EC2 instance security group. Run the flow in AnypointStudio first to ensure it will work when deployed to your Docker container.
-
 
 {sp} +
 
-This concludes our brief examples with Dockerizing the Mule.
+
+This concludes our brief examples with creating Docker Overlay Networks. With these fundamental building blocks
+in place, you now have the essential pieces necessary for building larger, more complex Docker container interactions.
+
+Be sure to remove any AWS assets you may have used in these examples so you don't incur any ongoing costs.
 
 {sp} +
 
