@@ -197,9 +197,13 @@ To add a manager to this swarm, run 'docker swarm join-token manager' and follow
 
 {sp} +
 
-On Node 1 join the swarm as the manager
+It make take a minute or two for the Root CA Certificate to synchronize through the swarm, if you get an
+error give it a few minutes and try again.
 
-.Node 1 becomes manager
+If you happen to misplace the token, as of Docker you can use the _join-token_ argument to list tokens for
+manager and workers. For example, on Node 1 run the following.
+
+.Manager token for Node 1
 [listing]
 --
 docker swarm join-token manager
@@ -230,7 +234,7 @@ docker node ls
 .Results of listing nodes
 ....
 ID                            HOSTNAME            STATUS    AVAILABILITY   ENGINE VERSION
-2quenyegseco1w0e5n1qe58r3     ip-10-193-142-235   Ready     Active         18.03.1-ce
+2quenyegseco1w0e5n1qe58r3     ip-10-193-142-248   Ready     Active         18.03.1-ce
 wrjk02g909c6fnuxlepmksuz4     ip-10-193-142-246   Ready     Active         18.03.1-ce
 
 ....
