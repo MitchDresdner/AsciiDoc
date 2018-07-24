@@ -243,6 +243,13 @@ wrjk02g909c6fnuxlepmksuz4     ip-10-193-142-246   Ready     Active         18.03
 
 Also, notice that an Ingress network has been created, this provides an entry point for our swarm network.
 
+.List Docker networks
+[listing]
+--
+docker network ls
+--
+{sp} +
+
 .Results of Docker network listing
 [literal]
 NETWORK ID          NAME                DRIVER              SCOPE
