@@ -12,7 +12,7 @@ Mitch Dresdner <MDresdner@Terathink.com>
 :stylesdir: ./styles
 :scriptsdir: ./js
 // keywords added to html
-:keywords: docker, mule, mmc, deploy, microservice, monitoring
+:keywords: docker, microservice, AWS, EC2
 
 // enable btn:
 :experimental:
@@ -23,10 +23,10 @@ Creating an overlay network for standalone containers
 {sp} +
 
 [.preamble]
-// Preamble goes here
+Using Docker overlay networks for communicating across hosts
 
 
-image::under-construction.jpg[Containers in action,700]
+image::cargo-container.jpg[Containers in action,700]
 
 == Summary
 
@@ -38,7 +38,7 @@ an approach for distributing the applications across many machines. This is wher
 Docker Swarm provides capabilities for clustering, scalability, discovery and security to name a few. In this
 article, we'll create a basic Swarm configuration and perform some experiments to illustrate discovery and connectivity.
 
-The demo Swarm cluster will consist of a Swarm manager and a worker, for convenience it will be running in AWS.
+In this demo we'll create a Swarm overlay cluster that will consist of a Swarm manager and a worker, for convenience it will be running in AWS.
 
 {sp} +
 
@@ -52,20 +52,27 @@ _If you feel you're in need of a refresher on Docker Swarm or configuring your A
 
 == Architecture
 
-Our target Architecture will consist of deploying Mule applications from AnypointStudio into Docker containers running inside an AWS AMI image.
+Our target Architecture will consist of a couple of Docker containers running inside AWS AMI images on
+different EC2 hosts.  The purpose of these examples is to demonstrate the concepts of how  a Docker swarm can be used to discover services running
+on different host machines and communicate with one another.
 
 {sp} +
 
-image::under-construction.jpg[Mule in AWS,540]
+image::docker-overlay.png[Docker overlay networks]
 
 {sp} +
 
-In the steps below you'll configure an AWS EC2 instance and configure the environment for Docker. With Docker installed you'll
-create images for Mule and MMC, run the containers, associate the Mule runtime with the MMC and deploy a simple _Hello Mule_ application.
+In our hypothetical network above, we depict the inter connections of a Docker swarm manager and a couple of
+swarm workers. In the examples which follow we'll use a single manager and a single worker to keep complexity
+and cost low. Keep in mind that your real configurations will likely consist of many swarm workers.
 
-Docker containers are ephemeral by nature, which means that any changes to container state will be lost when a container is
-stopped. This isn't desirable and a quick remedy will be to use Docker volumes to persist and changes we need between container
-starts. The information which will be stateful is specified by the *VOLUME* tag in the Docker files below.
+Here's an example of what a potential Use Case may look like. An AWS load balancer configured to distribute
+load to a Docker swarm running on 2 or more EC2 instances.
+
+image::docker-aws-elb.png[Docker overlay networks]
+
+We'll show in the examples below how you can create a Docker swarm overlay network that will allow DNS
+discovery of members and allow members to communicate with one another.
 
 {sp} +
 
@@ -86,9 +93,9 @@ If you're not confident with AWS or would like a little refresher please review 
 === Caveats
 [CAUTION]
 --
-Some AWS services will incur charges, be sure to stop and/or terminate any services you aren't using. Additionaly,
+Some AWS services will incur charges, be sure to stop and/or terminate any services you aren't using. Additionally,
 consider setting up https://aws.amazon.com/about-aws/whats-new/2012/05/10/announcing-aws-billing-alerts/[billing alerts]
-to warn you of charges exceeding a threshold that may caus you concern.
+to warn you of charges exceeding a threshold that may cause you concern.
 
 --
 
@@ -118,7 +125,7 @@ AWS ports to open to support Docker swarm and our port connection test:
 |Container network discovery
 
 |Custom UDP Rule
-|TCP
+|UDP
 |4789
 |10.193.142.0/24
 |Container ingress network
@@ -348,6 +355,9 @@ docker container rm alpine1
 docker swarm leave --force
 --
 
+{sp} +
+There you have it, you created a tcp connection from Node 1 to Node 2 and sent a message. Similarly, your services can connect with and exchange data when running in the Docker overlay cluster.
+With these fundamental building blocks in place you're ready to apply these principles to real workd designs.
 {sp} +
 
 

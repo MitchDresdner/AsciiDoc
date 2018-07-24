@@ -88,7 +88,7 @@ If you're not confident with AWS or would like a little refresher please review 
 --
 Some AWS services will incur charges, be sure to stop and/or terminate any services you aren't using. Additionaly,
 consider setting up https://aws.amazon.com/about-aws/whats-new/2012/05/10/announcing-aws-billing-alerts/[billing alerts]
-to warn you of charges exceeding a threshold that may caus you concern.
+to warn you of charges exceeding a threshold that may cause you concern.
 
 --
 
