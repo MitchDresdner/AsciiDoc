@@ -1,0 +1,348 @@
+= Get a Clue, with json-server
+Mitch Dresdner <MDresdner@Terathink.com>
+:toc:                                             // Enable table of contents [left, right]
+:toc-placement: preamble
+:appversion: 1.0.0
+// A link as attribute
+:fedpkg: https://apps.fedoraproject.org/packages/asciidoc
+// Example of other attributes
+:imagesdir: ./img
+:icons: font
+// Default icon dir is images/icons, can override using :iconsdir: ./icons
+:stylesdir: ./styles
+:scriptsdir: ./js
+// keywords added to html
+:keywords: REST, json, java, node, npm, javascript, httpie
+
+// enable btn:
+:experimental:
+
+[abstract]
+Static JSON API responses with even less minimal effort
+
+{sp} +
+
+An end-to-end testing framework
+
+== Summary
+
+In April of this year I made the case for implementing static web sites using
+the https://dzone.com/articles/zero-code-rest-with-json-server[json-server and Zero coding].
+
+While easy to use and practical, i've refactored the article to save some 90 lines of installation steps
+using Docker and pre-built images courtousy of *Clue* https://github.com/clue[_aka Christian Luck_],
+so _get a clue_ and lets get going!
+
+
+<<<
+
+== Architecture
+
+The json-server is the Server side of the Client/Server Use Case, with a Client application
+making HTTP requests to the Server and the json-server providing determined canned responses
+or simulated errors.
+
+When the json-server starts, it will read a database of static
+JSON responses which we'll work with later using the HTTPie JSON Client.
+
+This Use Case uses a Dockerized instance of the json-server with it's database mounted
+externally in a volume share on the local filesystem. The file share is linked on my
+https://cloudkul.com/blog/mounting-s3-bucket-linux-ec2-instance[EC2 instance to an S3 bucket].
+
+{sp} +
+{sp} +
+
+[caption="foo"]
+.Client/Server interaction with the json-server
+image:json-server-redux.png[Json Server]
+
+<<<
+
+== Installation
+
+_The installation really is quite simple!_ Or, so I stated in the previous article, which hopefully
+provided a better grounding in each of the steps involved. But now the refactored steps are even easier.
+
+[source,json]
+.Create HTTPie Docker instance
+----
+$ # add to your .bashrc file to make alias permanent
+$ alias http='docker run -it --rm --net=host clue/httpie'
+----
+
+{sp} +
+{sp} +
+
+Using your favorite editor, enter the example json data below into the /data/wine.json file.
+
+[source,json]
+.db.json example data
+----
+{
+  "wines": [
+    { "id": 1, "product": "SOMMELIER SELECT",
+      "desc": "Old vine Cabernet Sauvignon", "price": 159.99 },
+    { "id": 2, "product": "MASTER VINTNER",
+      "desc": "Pinot Noir captures luscious aromas", "price": 89.99 },
+    { "id": 3, "product": "WINEMAKER'S RESERVE",
+      "desc": "Merlot featuring complex flavors of cherry", "price": 84.99 },
+    { "id": 4, "product": "ITALIAN SANGIOVESE",
+      "desc": "Sangiovese grape is famous for its dry, bright cherry character", "price": 147.99 }
+  ],
+  "comments": [
+    { "id": 1, "body": "like the added grape skins", "wineId": 1 },
+    { "id": 1, "body": "the directions need to be clearer", "wineId": 2 },
+    { "id": 3, "body": "I received 3 different packages of wood chips", "wineId": 1 }
+  ],
+  "profile": { "name": "vintnor" }
+}
+----
+
+{sp} +
+{sp} +
+
+=== Running the json-server
+
+With our sample data created lets start playing with the json-server.
+
+<<<
+
+== Interactions with json-server
+
+In this section we'll starting putting our json-server interactions into practical use.
+
+TIP: For a refresher on the usage of *HTTP Verbs* see this https://dzone.com/articles/the-simple-guide-to-http-verbs-patch-put-and-post[DZone HTTP verbs article.]
+
+[source,json]
+.Create json-server Docker container
+----
+$ # run the json-server
+$ docker run -d -p 80:80 --name json-server \
+    -v /data/wine.json:/data/db.json \
+    clue/json-server
+----
+<1> -d json-server runs in the background
+<2> -p host_port_listening_for_request:80 container port
+<3> -v json_db_on_host:/data.db.json in container
+
+{sp} +
+{sp} +
+
+=== HTTPie Examples
+
+We'll be using the HTTPie Docker container we created an alias
+for earlier to send JSON messages to the json-server.
+
+{sp} +
+{sp} +
+
+.Basic example of HTTPie usage
+[listing]
+----
+http :80/wines/1 <1>
+or
+http http://localhost:80/wines/1 <2>
+----
+<1> Short form
+<2> Long form
+{sp} +
+{sp} +
+
+When you invoke HTTPie using the command line, you can use the _short_ form
+(leave off the *http://localhost* part of the URI), or the _long_ form
+it's your choice.
+
+{sp} +
+{sp} +
+
+==== Making a GET Request
+
+
+.HTTP GET Requests
+image:get-wines-1.png[Folder structure,150]
+
+
+.Use HTTPie, curl or postman
+[listing]
+--
+http /wines/1
+--
+
+
+GET Requests
+|===
+|Request |URI |Result
+
+|GET
+|http :80/wines
+|All wine entries
+
+|GET
+|http :80/wines/1
+|Wine with ID=1
+
+|GET
+|http :80/wines?price_gte=100
+|wines with price >= 100
+
+|GET
+|http :80/wines?id_ne=2
+|filter id=2
+
+|GET
+|http :80/wines?_embed=comments
+|embed all comments
+
+|GET
+|http :80/wines/1?_embed=comments
+|embed comments for ID=1
+
+|===
+
+_For more examples see the https://github.com/typicode/json-server[json-server] website_
+
+{sp} +
+{sp} +
+
+==== Making a POST Request
+
+With POST we will add a new record to the database.
+
+{sp} +
+{sp} +
+
+.HTTP POST Requests
+image:post-wines.png[Folder structure,150]
+
+
+{sp} +
+{sp} +
+
+.Use HTTPie, curl or postman
+[listing]
+--
+http POST :80/wines id=5 product="TWO BUCK CHUCK" price=2.99 desc="Squeezed rapidly from a delicate, yet unpretentious grape"
+--
+
+
+|===
+
+|Request |URI |Result
+
+|POST
+|http POST :80/wines ... (see above)
+|New wine entry with id=5
+
+|GET
+|http :80/wines
+|All wine entries
+
+|GET
+|http :80/wines?desc_like=grape
+|All wines with _grape_ in  desc
+
+|===
+
+{sp} +
+{sp} +
+
+==== Making a PUT Request
+
+In our PUT example we'll make a change to *product*
+for the record we just added with POST.
+
+{sp} +
+{sp} +
+
+.HTTP PUT Requests
+image:put-wines.png[Folder structure,150]
+
+
+{sp} +
+{sp} +
+
+.Use HTTPie, curl or postman
+[listing]
+--
+http PUT :80/wines/5 product="TWO-ISH BUCK CHUCK" price=2.99 desc="Squeezed rapidly from a delicate, yet pretentious grape"
+--
+
+
+|===
+
+|Request |URI |Result
+
+|PUT
+|http PUT :80/wines ... (see above)
+|All wine entries
+
+|GET
+|http :80/wines
+|All wine entries
+
+|===
+
+{sp} +
+{sp} +
+
+NOTE: If you don't enter all the fields, PUT will replace with just what you provide.
+
+{sp} +
+{sp} +
+
+==== Finally, a DELETE Request
+
+To complete our example CRUD operations we'll delete the record with ID=5
+
+{sp} +
+{sp} +
+
+.HTTP DELETE Requests
+image:delete-wines.png[Folder structure,150]
+
+
+{sp} +
+{sp} +
+
+.Use HTTPie, curl or postman
+[listing]
+--
+http DELETE :80/wines/5
+--
+
+
+|===
+
+|Request |URI |Result
+
+|DELETE
+|http :80/wines/5
+|Deletes wine with ID=5
+
+|GET
+|http :80/wines
+|All wine entries
+
+|===
+
+{sp} +
+{sp} +
+
+Voila, the record is gone!
+
+There's lots more you can do with json-server including requests with additional verbs,
+adding middleware to include new features, enabling complex routing rules, sorting, filtering
+and much more.
+
+
+{sp} +
+{sp} +
+
+I hope you enjoyed reading this article as much as I have writing it, I'm looking forward to your feedback.
+
+{sp} +
+{sp} +
+
+About the Author:
+
+https://www.linkedin.com/in/mitch-dresdner-785a46126/[Mitch Dresdner] is a Senior Mule Consultant at TerraThink
