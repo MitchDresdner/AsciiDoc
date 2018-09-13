@@ -39,15 +39,17 @@ so _get a clue_ and lets get going!
 == Architecture
 
 The json-server is the Server side of the Client/Server Use Case, with a Client application
-making HTTP requests to the Server and the json-server providing determined canned responses
-or simulated errors.
+making REST requests to the Server and the json-server returning canned responses or simulated errors.
+This is ideal for rapid prototyping of interfaces.
 
 When the json-server starts, it will read a database of static
 JSON responses which we'll work with later using the HTTPie JSON Client.
 
 This Use Case uses a Dockerized instance of the json-server with it's database mounted
 externally in a volume share on the local filesystem. The file share is linked on my
-https://cloudkul.com/blog/mounting-s3-bucket-linux-ec2-instance[EC2 instance to an S3 bucket].
+https://cloudkul.com/blog/mounting-s3-bucket-linux-ec2-instance[EC2 instance to an S3 bucket],
+but you can add it to any convenient location in your file system. Just be sure to adjust the Docker
+volume mount point accordingly.
 
 {sp} +
 {sp} +
@@ -76,7 +78,7 @@ $ alias http='docker run -it --rm --net=host clue/httpie'
 Using your favorite editor, enter the example json data below into the /data/wine.json file.
 
 [source,json]
-.db.json example data
+.wine.json example data
 ----
 {
   "wines": [
