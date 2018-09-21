@@ -1,0 +1,201 @@
+= Measuring microservice latency with HTTPing
+Mitch Dresdner <MDresdner@Terathink.com>
+:toc:                                             // Enable table of contents [left, right]
+:toc-placement: preamble
+:appversion: 1.0.0
+// A link as attribute
+:fedpkg: https://apps.fedoraproject.org/packages/asciidoc
+// Example of other attributes
+:imagesdir: ./img
+:icons: font
+// Default icon dir is images/icons, can override using :iconsdir: ./icons
+:stylesdir: ./styles
+:scriptsdir: ./js
+// keywords added to html
+:keywords: mule, docker, httping, latency, microservice, aws, metrics, performance
+
+// enable btn:
+:experimental:
+
+[abstract]
+Using ping over HTTP
+
+{sp} +
+
+[.preamble]
+_When you can measure it, you can manage it_
+
+
+image::ping-no-pong.jpg[Ping over HTTP,700]
+
+== Summary
+
+Httping is like 'ping' but for http-requests (https://www.vanheusden.com/httping/[vanheusden])
+
+Latency for MicroServices is defined as the time it takes to send a request and the time
+it takes for the result to be returned. Various parts of the system can effect the latency, some of which may include
+
+* Network transit
+* Hardware
+* Application design
+* Security
+
+Measuring our latency over time can help us better understand bottlenecks.
+
+{sp} +
+
+== Architecture
+
+While there are many different tools that are useful to understanding the performance of
+our systems and where bottlenecks may occur, it's often the basic tools which help us begin
+our understanding.
+
+HTTPing is one such basic tool. It's premise is based upon the Unix Ping command, which sends
+https://en.wikipedia.org/wiki/Internet_Control_Message_Protocol[ICMP packets] to the system under test.
+The system receiving the ping sends a response which allows the sender to measure the latency between the two systems.
+
+Ping can measure the fastest, average and maximum time between request/response. Failures to respond can
+help to pinpoint a disruption of service between the systems and is an effective diagnostic for
+determining connectivity.
+
+But, what if you're running in an environment where ICMP isn't allowed? Or, maybe you would just
+like more granular details about how your TCP servers are working? This is the Use Case for
+HTTPing, see diagram below:
+
+image::HTTPing.png[Basic architecture]
+
+With HTTPing, you enter the url of your TCP server, and it can show
+
+- The time it takes to connect
+- Time to send a request
+- Time to retrieve the response
+
+HTTPing measures the latency of the server and the network.
+
+== Getting Started
+
+There's a couple of choices for gettings started with HTTPing, you can download
+the code from the authors site, install as a Linux package or run a Docker container.
+
+This article will walk you through the first and last option.
+
+=== Where to get HTTPing
+
+Download or learn more about HTTPing from the https://www.vanheusden.com/httping/[authors website here].
+
+=== HTTPing in Docker
+
+The Docker container we'll be using was created by https://www.bretfisher.com/[Captain Bret Fisher] (a real Docker Captain).
+
+His image is based on Debian Stretch, a light weight minimal image and is built using the latest
+HTTPing code from the https://github.com/flok99/qhttping[authors Git repository].
+
+You can https://github.com/BretFisher/httping-docker[learn more about Bret's Dockerfile here].
+
+=== Mule health check
+
+For most of our Mule based MicroServices we implement a minimal health check flow which responds with
+some basic information to the requestor, which is usually an AWS API Gateway or Kong API Gateway.
+
+You can use the Mule health check for the examples below or just about any TCP server, i've porvided a simple
+Docker example later in the article. Here's what the simple Mule flow looks like:
+
+image::mule-health-check.png[Mule health check]
+
+.Simple health check
+----
+<flow name="health-check">
+    <http:listener config-ref="HTTP_REST_Listener" path="/health" doc:name="HTTP">
+        <http:response-builder statusCode="200" reasonPhrase="All's well that end's well!"/>
+    </http:listener>
+    <logger message="Health check requested" level="INFO" doc:name="Logger"/>
+    <set-payload value="uService on #[InetAddress.getLocalHost().getHostName()] sez ... i'm Okay." doc:name="Set Payload"/>
+</flow>
+----
+
+{sp} +
+
+
+== Playing with HTTPing
+
+In the exercises below we'll show some basic usage examples for HTTPing. The examples will be run using the
+sample Mule flow above. Mule isn't necessary for the examples, just about any HTTP service should work fine.
+If you would like another simple Docker service to try the examples with, see
+https://dzone.com/articles/get-a-clue-with-json-server[my DZone article here].
+
+{sp} +
+
+.Getting Help
+----
+docker run --rm bretfisher/httping
+----
+
+The first time the command is run will take some extra time to download and create the container.
+Subsequent invocations will be much faster.
+
+{sp} +
+
+.Basic latency test
+----
+# ping until ^C
+docker run --rm bretfisher/httping 10.193.142.246:8082/health
+----
+
+image::httping-basic.png[HTTPing basic response]
+
+{sp} +
+
+.Colorize your response
+----
+# ping every 100ms, use GET not HEAD, show status codes, use pretty colors
+docker run --rm bretfisher/httping -i .1 -G -s -Y 10.193.142.246:8082/health
+----
+
+image::httping-color-nolimits.png[HTTPing response in color]
+
+{sp} +
+
+.Colorized response, with limits
+----
+# ping every .5s, use GET not HEAD, color responses over 299msec Red, 275msec Yellow
+docker run --rm bretfisher/httping -i .5 -G -s -Y --threshold-red 3.0 --threshold-yellow 2.75 10.193.142.246:8082/health
+----
+
+image::httping-color-limits.png[Set thresholds, colorize violators]
+
+{sp} +
+
+.Run 3 times and stop
+----
+# ping 3 times, use GET not HEAD, show status codes, use pretty colors
+docker run --rm bretfisher/httping -c 3  -G -s -Y 10.193.142.246:8082/health
+----
+
+image::httping-color-3times.png[Execute ping 3 times]
+
+{sp} +
+
+.Fancy graphs
+----
+# add a -it to run command and a -K
+docker run --rm bretfisher/httping -i .5 -GsYK 10.193.142.246:8082/health
+----
+
+image::httping-fancy-graphics.png[HTTPing response in color]
+
+
+{sp} +
+
+These examples and others inspired from the --help command should get you well on your way to understanding latency
+problems with MicroServices.
+
+I hope you enjoyed reading this article as much as I have enjoyed writing it, i'm looking forward to your feedback!
+
+{sp} +
+{sp} +
+
+
+
+About the Author:
+
+https://www.linkedin.com/in/mitch-dresdner-785a46126/[Mitch Dresdner] is a Senior Mule Consultant at TerraThink
