@@ -59,8 +59,8 @@ help to pinpoint a disruption of service between the systems and is an effective
 determining connectivity.
 
 But, what if you're running in an environment where ICMP isn't allowed? Or, maybe you would just
-like more granular details about how your TCP servers are working? This is the Use Case for
-HTTPing, see diagram below:
+like more granular details about how your TCP servers are working, header details, response data? This is the Use Case for
+HTTPing.
 
 image::HTTPing.png[Basic architecture]
 
@@ -69,15 +69,19 @@ With HTTPing, you enter the url of your TCP server, and it can show
 - The time it takes to connect
 - Time to send a request
 - Time to retrieve the response
+- Header and response data
 
-HTTPing measures the latency of the server and the network.
+HTTPing provides a more accurate picture of server details, the latency of the server and the network.
 
 == Getting Started
 
-There's a couple of choices for gettings started with HTTPing, you can download
+There's a couple of choices for getting started with HTTPing, you can download
 the code from the authors site, install as a Linux package or run a Docker container.
 
-This article will walk you through the first and last option.
+The examples which follow will be based on the Docker container running HTTPing and the
+first invocation you make will download the Docker image.  The next two sections provide background
+information of you would like to install the standalone Unix version or learn more about the
+Docker instance.
 
 === Where to get HTTPing
 
@@ -94,11 +98,14 @@ You can https://github.com/BretFisher/httping-docker[learn more about Bret's Doc
 
 === Mule health check
 
-For most of our Mule based MicroServices we implement a minimal health check flow which responds with
-some basic information to the requestor, which is usually an AWS API Gateway or Kong API Gateway.
+You can use the Mule health check for the examples which follow or just about any TCP server, i've also provided a simple
+Docker example later in the article which you can spin up with minimal effort.
 
-You can use the Mule health check for the examples below or just about any TCP server, i've porvided a simple
-Docker example later in the article. Here's what the simple Mule flow looks like:
+For most of our Mule based MicroServices we implement a health check flow which responds with some basic
+information to the requestor, which for us is usually an AWS API Gateway or Kong API Gateway.  The Gateway
+uses this information to determine which instance to direct it's requests to or if it's necessary to autoscale.
+
+Here's what the simple Mule flow looks like:
 
 image::mule-health-check.png[Mule health check]
 
@@ -120,18 +127,26 @@ image::mule-health-check.png[Mule health check]
 
 In the exercises below we'll show some basic usage examples for HTTPing. The examples will be run using the
 sample Mule flow above. Mule isn't necessary for the examples, just about any HTTP service should work fine.
-If you would like another simple Docker service to try the examples with, see
+
+If you would like to use another simple HTTP Service rather than the Mule example above, consider spinning up this
+Docker service to try out the examples with, see
 https://dzone.com/articles/get-a-clue-with-json-server[my DZone article here].
 
 {sp} +
 
 .Getting Help
 ----
-docker run --rm bretfisher/httping
+docker run --rm bretfisher/httping --help
 ----
 
-The first time the command is run will take some extra time to download and create the container.
+The first time the Docker run command is invoked will result in downloading the image from
+Docker Hub and running the HTTPing command.
 Subsequent invocations will be much faster.
+
+Be sure to replace my _ip address_ with the ip address or FQDN of your server.
+
+As you can see there's plenty of options you can provide to HTTPing to help get your arms around latency
+issues with your server, we'll explore some of these options in the examples below.
 
 {sp} +
 
@@ -143,6 +158,14 @@ docker run --rm bretfisher/httping 10.193.142.246:8082/health
 
 image::httping-basic.png[HTTPing basic response]
 
+The basic latency will run continuously and display the round trip transit time for each request to the server.
+You can stop the command by typing ^C.  When the command stops you'll see a summary for the test showing
+failures, fastest request, average time and the longest request time.
+
+Should you get no response at all you might check the route to your server or SSH to the server and launch
+the same request from there. By dividing a larger flow into smaller segments you will gain insights into where
+failures and performance problems are occurring.
+
 {sp} +
 
 .Colorize your response
@@ -152,6 +175,10 @@ docker run --rm bretfisher/httping -i .1 -G -s -Y 10.193.142.246:8082/health
 ----
 
 image::httping-color-nolimits.png[HTTPing response in color]
+
+In the color version we are also including the response data from the server request using the _-G_ switch.
+The _-i_ switch specifies the interval, which in the example above is 100msec. The HTTP status code (200)
+is displayed for us compliments of the _-s_ switch.
 
 {sp} +
 
@@ -163,6 +190,10 @@ docker run --rm bretfisher/httping -i .5 -G -s -Y --threshold-red 3.0 --threshol
 
 image::httping-color-limits.png[Set thresholds, colorize violators]
 
+In this example we apply some limits to what we feel is acceptable in terms of latency. For our example
+we've arbitrarily decided that a latency of 2.75 msec should result in a Yellow caution advisory and
+a latency of 3.0 msec would be displayed in Red.
+
 {sp} +
 
 .Run 3 times and stop
@@ -172,6 +203,10 @@ docker run --rm bretfisher/httping -c 3  -G -s -Y 10.193.142.246:8082/health
 ----
 
 image::httping-color-3times.png[Execute ping 3 times]
+
+With this run we pass the -c switch with a count of 3 to run the test 3 times and stop. Sometime we're
+less interested in running some number of tests over a time period and more interested in finding out
+if we have a path to our server, so we limit the test to some number of requests.
 
 {sp} +
 
@@ -183,10 +218,13 @@ docker run --rm bretfisher/httping -i .5 -GsYK 10.193.142.246:8082/health
 
 image::httping-fancy-graphics.png[HTTPing response in color]
 
+The _-K_ switch provides a graphic representation of the system under test using the Unix curses package.
+The display will run continuously until you stop it with ^C.
+
 
 {sp} +
 
-These examples and others inspired from the --help command should get you well on your way to understanding latency
+These examples inspired from the --help command should get you well on your way to understanding latency
 problems with MicroServices.
 
 I hope you enjoyed reading this article as much as I have enjoyed writing it, i'm looking forward to your feedback!
