@@ -1,0 +1,479 @@
+= REST with Express, DynamoDB and Docker
+Mitch Dresdner <MDresdner@Terathink.com>
+:toc:                                             // Enable table of contents [left, right]
+:toc-placement: preamble
+:appversion: 1.0.0
+// A link as attribute
+:fedpkg: https://apps.fedoraproject.org/packages/asciidoc
+// Example of other attributes
+:imagesdir: ./img
+:icons: font
+:stylesdir: ./styles
+:scriptsdir: ./js
+// keywords added to html
+:keywords: REST, json, express, dynamodb, node, npm, javascript, httpie
+
+// enable btn:
+:experimental:
+
+[abstract]
+Basic JSON operations using ExpressJS, DynamoDB and Docker
+
+image::ai-blur-codes-577585.jpg[Express for the REST of us]
+[caption="Photo by Kevin Ku from Pexels",link=https://www.pexels.com/@kevin-ku-92347]
+
+
+== Summary
+
+In my April article I demonstrated the ease of implementing a REST server using
+the https://dzone.com/articles/zero-code-rest-with-ExpressJS server[ExpressJS server and Zero coding].
+
+While easy to use and practical, it probably won't be long before you get to the point of wanting
+more in the way of custom routing and stateful database operations. In this article we'll explore using
+DynamoDB in a Docker container to persist REST CRUD messages routed using ExpressJS.
+
+<<<
+
+== Architecture
+
+ExpressJS is fulfilling the Server role of the Client/Server Use Case, with a HttpIE Client
+making REST requests to the Server and the ExpressJS server persisting JSON messages to DynamoDB
+and returning responses or errors. This is the typical pattern for most API's.
+
+image::docker-dnamodb.png[REST with ExpressJS and DynamoDB]
+
+The DynamoDB docker instance allows you to experiment with DynamoDB outside of AWS and not
+incur any cost. It's intended as a sandbox demonstration environment only, you should deploy
+to and AWS instance for any live production applications.
+
+You'll be sending the basic REST messages (POST, PUT, GET and DELETE) to Express which will route
+the Create, Update, Delete and Display components to and from the HttpIE client application. This example
+will provide the basics from which many real world applications can be modelled from.
+
+{sp} +
+{sp} +
+
+[caption="foo"]
+.Client/Server interaction with the ExpressJS server
+image:ExpressJS server-redux.png[Json Server]
+
+<<<
+
+== Skills
+image:tech-stack.png[Tech Stack]
+
+In the examples which follow you'll be installing a DynamoDB container so you'll be expected to have
+a Docker configuration you can run the container from and a basic understanding of working with
+Docker.
+
+A basic understanding of AWS and DynamoDB will be helpful.
+
+You'll also be creating a simple server using ExpressJS and will need to have Node/NPM installed and it
+would be good to have a working knowledge of the same. I'm working with the most current version v8.12.0,
+but it's possible that lower versions may work.
+
+To send JSON CRUD commands to our ExpressJS server i'll be using HttpIE, but if you prefer Postman or CURL
+the examples should be easy to translate. If you would need some help installing Node/NPM and HttpIE please
+refer to my earlier DZone article https://dzone.com/articles/zero-code-rest-with-ExpressJS server[ExpressJS server and Zero coding].
+
+== Installation
+
+The DynamoDB Docker container we'll be using is the https://hub.docker.com/r/dwmkerr/dynamodb/[Kerr edition found here].
+It has a browser interface with an interactive terminal for playing with DynamoDB. It also supports a volume
+share for persisting content, otherwise the data is ephemeral.
+
+[source,json]
+.Install/Start your DynamoDB container
+----
+$ # add to your .bashrc file to make alias permanent
+$ docker run -p 8000:8000 dwmkerr/dynamodb
+----
+
+{sp} +
+{sp} +
+
+If you don't already have an AWS account you might consider signing up for one. As you're running
+DynamoDB as a container service it appears that your credentials aren't strictly required, but are
+a dependence in the AWS SDK which we'll be using for DynamoDB access. The following link describes the
+configurations for https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html[AWS Credentials].
+
+If I spoof my password, the DynamoDB login still works, but if I rename the config or credentials file
+I get an exception, so it's possible you can play with the examples without an account, but the strategy is not
+practical if you plan to take next steps with DynamoDB.
+
+{sp} +
+{sp} +
+
+Create a directory for the ExpressJS project and run _npm init_ to initialize the package.json file.
+
+[source,json]
+.Create your ExpressJS project
+----
+$ mkdir mydynamo
+$ cd mydynamo
+$ npm init -y
+----
+
+{sp} +
+{sp} +
+
+Using your favorite editor, create the package.json data below in your project folder.
+
+[source,json]
+.package.json example
+----
+{
+  "name": "test-setup",
+  "version": "1.0.0",
+  "description": "",
+  "main": "list-tables.js",
+  "scripts": {
+    "list": "node list-tables.js",
+    "load": "node MoviesLoadData.js",
+    "q1": "node MoviesQuery01.js",
+    "q2": "node MoviesQuery02.js",
+    "scan": "node MoviesScan.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.339.0"
+  }
+}
+
+----
+
+{sp} +
+{sp} +
+
+
+[source,json]
+.Install Node packages
+----
+$ npm i
+----
+
+{sp} +
+{sp} +
+
+To help minimize the amount of code we'll need for the examples, we'll be reusing the Movie Sample code
+and data from the AWS DynamoDB developer guide. Here's a list of the examples to add to the project.
+
+|===
+|Source File |Location |Description
+
+|MoviesCreateTable.js
+|https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GettingStarted.NodeJs.01.html
+|Creates the DynamoDB table needed for the examples
+
+|MoviesLoadData.js
+|https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GettingStarted.NodeJs.02.html
+|Install sample data into DynamoDB
+
+|MoviesQuery01.js
+|https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GettingStarted.NodeJs.04.html
+|Query all movies released in a specified year
+
+|MoviesQuery02.js
+|https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GettingStarted.NodeJs.04.html
+|Query by title, all movies released in a specified year
+
+|MoviesScan.js
+|https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GettingStarted.NodeJs.04.html
+|Scans all table data, qualified by a filter
+
+|MoviesDeleteTable.js
+|https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/GettingStarted.NodeJs.05.html
+|Delete sample data table
+
+|===
+
+{sp} +
+{sp} +
+
+Download the sample data to your project.
+
+[source,json]
+.Download moviedata.json
+----
+$ http --download https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/samples/moviedata.zip
+----
+
+Unzip the moviedata.json file into the project folder, you can remove the zip file afterward.
+
+=== Create table and install sample data
+
+The package.json file is scripted to create, delete, query and load the sample data.
+
+[source,json]
+.Create database
+----
+$ npm run create
+----
+
+Next load the sample data
+
+[source,json]
+.Load the sample data
+----
+$ npm run load
+----
+
+Run a sample query
+
+[source,json]
+.Query the DynamoDB table
+----
+$ npm run q1
+----
+
+=== Create the ExpressJS API's
+
+Add the following code to you project for handling JSON requests.
+
+=== Running the ExpressJS server
+
+With our sample data created lets start playing with the ExpressJS server.
+
+<<<
+
+== Interactions with ExpressJS server
+
+In this section we'll starting putting our  interactions into practical use.
+
+TIP: For a refresher on the usage of *HTTP Verbs* see this https://dzone.com/articles/the-simple-guide-to-http-verbs-patch-put-and-post[DZone HTTP verbs article.]
+
+[source,json]
+.Create ExpressJS server Docker container
+----
+$ # run the ExpressJS server
+$ docker run -d -p 80:80 --name ExpressJS server \
+    -v /data/wine.json:/data/db.json \
+    clue/ExpressJS server
+----
+<1> -d ExpressJS server runs in the background
+<2> -p host_port_listening_for_request:80 container port
+<3> -v json_db_on_host:/data.db.json in container
+
+{sp} +
+{sp} +
+
+=== HTTPie Examples
+
+We'll be using the HTTPie Docker container we created an alias
+for earlier to send JSON messages to the ExpressJS server.
+
+{sp} +
+{sp} +
+
+.Basic example of HTTPie usage
+[listing]
+----
+http :80/wines/1 <1>
+or
+http http://localhost:80/wines/1 <2>
+----
+<1> Short form
+<2> Long form
+{sp} +
+{sp} +
+
+When you invoke HTTPie using the command line, you can use the _short_ form
+(leave off the *http://localhost* part of the URI), or the _long_ form
+it's your choice.
+
+{sp} +
+{sp} +
+
+==== Making a GET Request
+
+
+.HTTP GET Requests
+image:get-wines-1.png[Folder structure,150]
+
+
+.Use HTTPie, curl or postman
+[listing]
+--
+http /wines/1
+--
+
+
+GET Requests
+|===
+|Request |URI |Result
+
+|GET
+|http :80/wines
+|All wine entries
+
+|GET
+|http :80/wines/1
+|Wine with ID=1
+
+|GET
+|http :80/wines?price_gte=100
+|wines with price >= 100
+
+|GET
+|http :80/wines?id_ne=2
+|filter id=2
+
+|GET
+|http :80/wines?_embed=comments
+|embed all comments
+
+|GET
+|http :80/wines/1?_embed=comments
+|embed comments for ID=1
+
+|===
+
+_For more examples see the https://github.com/typicode/ExpressJS server[ExpressJS server] website_
+
+{sp} +
+{sp} +
+
+==== Making a POST Request
+
+With POST we will add a new record to the database.
+
+{sp} +
+{sp} +
+
+.HTTP POST Requests
+image:post-wines.png[Folder structure,150]
+
+
+{sp} +
+{sp} +
+
+.Use HTTPie, curl or postman
+[listing]
+--
+http POST :80/wines id=5 product="TWO BUCK CHUCK" price=2.99 desc="Squeezed rapidly from a delicate, yet unpretentious grape"
+--
+
+
+|===
+
+|Request |URI |Result
+
+|POST
+|http POST :80/wines ... (see above)
+|New wine entry with id=5
+
+|GET
+|http :80/wines
+|All wine entries
+
+|GET
+|http :80/wines?desc_like=grape
+|All wines with _grape_ in  desc
+
+|===
+
+{sp} +
+{sp} +
+
+==== Making a PUT Request
+
+In our PUT example we'll make a change to *product*
+for the record we just added with POST.
+
+{sp} +
+{sp} +
+
+.HTTP PUT Requests
+image:put-wines.png[Folder structure,150]
+
+
+{sp} +
+{sp} +
+
+.Use HTTPie, curl or postman
+[listing]
+--
+http PUT :80/wines/5 product="TWO-ISH BUCK CHUCK" price=2.99 desc="Squeezed rapidly from a delicate, yet pretentious grape"
+--
+
+
+|===
+
+|Request |URI |Result
+
+|PUT
+|http PUT :80/wines ... (see above)
+|All wine entries
+
+|GET
+|http :80/wines
+|All wine entries
+
+|===
+
+{sp} +
+{sp} +
+
+NOTE: If you don't enter all the fields, PUT will replace with just what you provide.
+
+{sp} +
+{sp} +
+
+==== Finally, a DELETE Request
+
+To complete our example CRUD operations we'll delete the record with ID=5
+
+{sp} +
+{sp} +
+
+.HTTP DELETE Requests
+image:delete-wines.png[Folder structure,150]
+
+
+{sp} +
+{sp} +
+
+.Use HTTPie, curl or postman
+[listing]
+--
+http DELETE :80/wines/5
+--
+
+
+|===
+
+|Request |URI |Result
+
+|DELETE
+|http :80/wines/5
+|Deletes wine with ID=5
+
+|GET
+|http :80/wines
+|All wine entries
+
+|===
+
+{sp} +
+{sp} +
+
+Voila, the record is gone!
+
+There's lots more you can do with ExpressJS server including requests with additional verbs,
+adding middleware to include new features, enabling complex routing rules, sorting, filtering
+and much more.
+
+
+{sp} +
+{sp} +
+
+I hope you enjoyed reading this article as much as I have writing it, I'm looking forward to your feedback.
+
+{sp} +
+{sp} +
+
+About the Author:
+
+https://www.linkedin.com/in/mitch-dresdner-785a46126/[Mitch Dresdner] is a Senior Mule Consultant at TerraThink
